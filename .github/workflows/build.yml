@@ -32,15 +32,15 @@ jobs:
       run: dotnet build ./ModManager/ModManager.csproj -c Release --no-restore
 
     # 5. 发布为独立可执行文件 (这是生成 .exe 的关键步骤)
-    - name: Publish as single-file executable
-      run: |
-        dotnet publish ./ModManager/ModManager.csproj `
-          -c Release `
-          -r win-x64 `
-          --self-contained true `
-          -p:PublishSingleFile=true `
-          -p:IncludeNativeLibrariesForSelfExtract=true `
-          -o ./publish/ModManager
+    #- name: Publish as single-file executable
+    #  run: |
+    #    dotnet publish ./ModManager/ModManager.csproj `
+    #      -c Release `
+    #      -r win-x64 `
+    #     --self-contained true `
+    #      -p:PublishSingleFile=true `
+    #     -p:IncludeNativeLibrariesForSelfExtract=true `
+    #      -o ./publish/ModManager
       # -r win-x64: 指定目标平台为 64位 Windows[reference:3]
       # --self-contained true: 发布为独立应用，自带 .NET 运行时[reference:4]
       # -p:PublishSingleFile=true: 将所有内容打包成单个 .exe 文件[reference:5]
@@ -48,8 +48,20 @@ jobs:
       # -o: 指定输出目录
 
     # 6. 上传 .exe 文件作为构建产物 (Artifact)
-    - name: Upload executable as artifact
+    #- name: Upload executable as artifact
+    #  uses: actions/upload-artifact@v4
+     # with:
+      #  name: ModManager-win-x64
+       # path: ./publish/ModManager/ModManager.exe
+    - name: Publish as folder (with resources)
+      run: |
+        dotnet publish ./ModManager/ModManager.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -o ./publish/ModManager
+    - name: Upload executable and resources
       uses: actions/upload-artifact@v4
       with:
         name: ModManager-win-x64
-        path: ./publish/ModManager/ModManager.exe
+        path: ./publish/ModManager   # 上传整个文件夹
