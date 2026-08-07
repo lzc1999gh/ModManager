@@ -1,0 +1,85 @@
+<UserControl x:Class="WpfApp1.Views.ModListView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:conv="clr-namespace:WpfApp1.Converters"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="当前角色 Mod 列表" FontWeight="Bold" Margin="6" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Command="{Binding RefreshModsCommand}" Margin="6" VerticalAlignment="Center">
+                <Image Width="18" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/re.png" />
+            </Button>
+        </Grid>
+        <ListBox Grid.Row="1" ItemsSource="{Binding SelectedCharacter.Mods}" SelectedItem="{Binding SelectedMod}" AllowDrop="True" PreviewDragOver="ListBox_PreviewDragOver" Drop="ListBox_Drop" ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <ListBox.Resources>
+                <BooleanToVisibilityConverter x:Key="BoolToVis" />
+                <!-- Uniform item height/style -->
+                <Style TargetType="ListBoxItem" x:Key="ModListItemStyle">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="6 6 6 6" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="VerticalContentAlignment" Value="Center" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Bd" CornerRadius="6" BorderThickness="1" BorderBrush="#000" Background="#FFF" SnapsToDevicePixels="True">
+                                    <Grid Height="56">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="80" />
+                                        </Grid.ColumnDefinitions>
+                                        <ContentPresenter Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0" />
+                                        <!-- 状态显示：启用时显示绿色圆点 -->
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0">
+                                            <Ellipse Width="12" Height="12" Fill="#33CC66" Visibility="{Binding Enabled, Converter={StaticResource BoolToVis}}" Margin="0,0,6,0" />
+                                            <TextBlock Text="启用" Foreground="#33CC66" FontWeight="Bold" Visibility="{Binding Enabled, Converter={StaticResource BoolToVis}}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <!-- 当 Enabled 为 true 时保持明显样式 -->
+                                    <DataTrigger Binding="{Binding Enabled}" Value="True">
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#33CC66" />
+                                        <Setter TargetName="Bd" Property="Background" Value="#EEFFFB" />
+                                    </DataTrigger>
+                                    <!-- 选中时高亮边框（和 Enabled 区别） -->
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#3399FF" />
+                                        <Setter TargetName="Bd" Property="BorderThickness" Value="2" />
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#666" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <EventSetter Event="PreviewMouseLeftButtonUp" Handler="ListBoxItem_PreviewMouseLeftButtonUp" />
+                </Style>
+            </ListBox.Resources>
+
+            <ListBox.ItemContainerStyle>
+                <StaticResource ResourceKey="ModListItemStyle" />
+            </ListBox.ItemContainerStyle>
+
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="Black" FontSize="13"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

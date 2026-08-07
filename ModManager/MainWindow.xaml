@@ -1,0 +1,45 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        xmlns:views="clr-namespace:WpfApp1.Views"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="600" Width="1000">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- toolbar -->
+        <Border Grid.Row="0" Background="#FF2B2B2B" Margin="0,0,0,6">
+            <StackPanel Orientation="Horizontal" Margin="8">
+                <TextBlock Text="选择游戏：" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="White" />
+                <ComboBox ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}" DisplayMemberPath="Name" Width="140" VerticalContentAlignment="Center" />
+                <TextBlock Text="    Mods 根目录:" VerticalAlignment="Center" Margin="12,0,6,0" Foreground="White" />
+                <TextBox Width="360" Text="{Binding SelectedGame.ModsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" IsReadOnly="True" />
+                <Button Content="设置" Click="BtnSetModsRoot_Click" Margin="8,0" />
+                <Button Content="打开" Command="{Binding OpenModsRootCommand}" Margin="4,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- Main 2x2 layout -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <views:CharacterView Grid.Row="0" Grid.Column="0" />
+            <views:ModListView Grid.Row="0" Grid.Column="1" />
+            <views:ModDetailView Grid.Row="1" Grid.Column="0" />
+            <views:ModPreviewView Grid.Row="1" Grid.Column="1" />
+        </Grid>
+    </Grid>
+</Window>
