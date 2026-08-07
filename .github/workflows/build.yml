@@ -3,9 +3,9 @@ name: Build and Package ModManager
 # 触发工作流的事件
 on:
   push:
-    branches: [ "main" ]  # 当代码推送到 main 分支时触发
+    branches: [ "master" ]  # 当代码推送到 main 分支时触发
   pull_request:
-    branches: [ "main" ]  # 当有 PR 指向 main 分支时触发
+    branches: [ "master" ]  # 当有 PR 指向 main 分支时触发
   workflow_dispatch:        # 允许你从 GitHub Actions 页面手动触发
 
 jobs:
@@ -21,20 +21,20 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x' # 确保此版本与你的项目目标框架兼容[reference:2]
+        dotnet-version: '10.0.x' # 确保此版本与你的项目目标框架兼容[reference:2]
 
     # 3. 还原依赖包
     - name: Restore dependencies
-      run: dotnet restore ./WpfApp1/ModManager.csproj
+      run: dotnet restore ./ModManager/ModManager.csproj
 
     # 4. 构建项目 (Release 模式)
     - name: Build project
-      run: dotnet build ./WpfApp1/ModManager.csproj -c Release --no-restore
+      run: dotnet build ./ModManager/ModManager.csproj -c Release --no-restore
 
     # 5. 发布为独立可执行文件 (这是生成 .exe 的关键步骤)
     - name: Publish as single-file executable
       run: |
-        dotnet publish ./WpfApp1/ModManager.csproj `
+        dotnet publish ./ModManager/ModManager.csproj `
           -c Release `
           -r win-x64 `
           --self-contained true `
