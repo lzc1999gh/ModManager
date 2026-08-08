@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO.Compression;
@@ -125,16 +125,12 @@ namespace WpfApp1.ViewModels
             var wwPath = projectRoot != null ? Path.Combine(projectRoot, "Resources", "CharacterPic", "WW") : Path.Combine("Resources", "CharacterPic", "WW");
             Games.Add(new Game { Id = "GI", Name = "GI", Path = giPath });
             Games.Add(new Game { Id = "WW", Name = "WW", Path = wwPath });
-            SelectedGame = Games.FirstOrDefault();
 
             LoadStateOrSample();
 
             // 初始化 CharactersView 并设置过滤
             CharactersView = CollectionViewSource.GetDefaultView(Characters);
             CharactersView.Filter = CharacterFilter;
-
-            // 强制根据当前选中游戏从 Resources 或配置路径加载角色，覆盖任何持久化的 Characters 快照
-            LoadCharactersForGame(SelectedGame);
 
             // 不再自动应用默认 ModsRootPath，改为仅使用用户自定义路径（持久化在 modstate.json）
         }
