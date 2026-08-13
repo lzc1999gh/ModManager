@@ -3,10 +3,10 @@ using System.Windows;
 using System;
 using System.Linq;
 
-using WpfApp1.ViewModels;
-using WpfApp1.Models;
+using ModManager.ViewModels;
+using ModManager.Models;
 
-namespace WpfApp1.Views
+namespace ModManager.Views
 {
     public partial class ModListView : System.Windows.Controls.UserControl
     {

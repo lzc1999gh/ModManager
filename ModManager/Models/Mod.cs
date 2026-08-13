@@ -4,17 +4,47 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace WpfApp1.Models
+namespace ModManager.Models
 {
     public class Mod : INotifyPropertyChanged
     {
         private bool _enabled;
         public string Id { get; set; }
-        public string Name { get; set; }
-        // 原始文件或文件夹路径
-        public string FilePath { get; set; }
-        // 预览图片路径（可为空）
-        public string PreviewPath { get; set; }
+        private string? _name;
+        public string? Name
+        {
+            get => _name;
+            set
+            {
+                if (_name == value) return;
+                _name = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string? _filePath;
+        public string? FilePath
+        {
+            get => _filePath;
+            set
+            {
+                if (_filePath == value) return;
+                _filePath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string? _previewPath;
+        public string? PreviewPath
+        {
+            get => _previewPath;
+            set
+            {
+                if (_previewPath == value) return;
+                _previewPath = value;
+                OnPropertyChanged();
+            }
+        }
         public ObservableCollection<IniShortcut> IniShortcuts { get; set; } = new ObservableCollection<IniShortcut>();
         // 可选：文件大小（字节）
         public long Size { get; set; }

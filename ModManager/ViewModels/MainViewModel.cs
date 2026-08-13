@@ -1,21 +1,30 @@
+using ModManager.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.IO.Compression;
 using System.IO;
-using System.Windows.Data;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
-using WpfApp1.Models;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace WpfApp1.ViewModels
+
+namespace ModManager.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private const string StateFile = "modstate.json";
+        private static readonly string StateDirectory = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "ModManager");
 
+        private static readonly string StateFile = Path.Combine(
+            StateDirectory,
+            "modstate.json");
         public ObservableCollection<Game> Games { get; } = new ObservableCollection<Game>();
         public ObservableCollection<Character> Characters { get; } = new ObservableCollection<Character>();
 
@@ -119,12 +128,21 @@ namespace WpfApp1.ViewModels
             ToggleShowOnlyWithModsCommand = new RelayCommand(p => { ShowOnlyWithMods = !ShowOnlyWithMods; }, p => true);
 
             // 初始化可选游戏列表，使用项目内 Resources 路径（相对于运行目录）
-            // 尝试解析项目根目录并定位到 WpfApp1\Resources\CharacterPic\{GI|WW}
-            var projectRoot = GetProjectRoot();
-            var giPath = projectRoot != null ? Path.Combine(projectRoot, "Resources", "CharacterPic", "GI") : Path.Combine("Resources", "CharacterPic", "GI");
-            var wwPath = projectRoot != null ? Path.Combine(projectRoot, "Resources", "CharacterPic", "WW") : Path.Combine("Resources", "CharacterPic", "WW");
-            Games.Add(new Game { Id = "GI", Name = "GI", Path = giPath });
-            Games.Add(new Game { Id = "WW", Name = "WW", Path = wwPath });
+            var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
+
+            Games.Add(new Game
+            {
+                Id = "GI",
+                Name = "GI",
+                Path = Path.Combine(resourceRoot, "GI")
+            });
+
+            Games.Add(new Game
+            {
+                Id = "WW",
+                Name = "WW",
+                Path = Path.Combine(resourceRoot, "WW")
+            });
 
             LoadStateOrSample();
 
@@ -167,16 +185,13 @@ namespace WpfApp1.ViewModels
 
         public void LoadCharactersForGame(Game game)
         {
-            if (game == null) return;
+            if (game == null)
+                return;
+
             var folder = game.Path;
-            // 如果是相对路径，基于应用程序目录解析
-            if (!Path.IsPathRooted(folder))
+
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
             {
-                folder = Path.Combine(AppContext.BaseDirectory, folder);
-            }
-            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
-            {
-                // clear if path not available
                 Characters.Clear();
                 SelectedCharacter = null;
                 LastResolvedGamePath = folder;
@@ -207,7 +222,7 @@ namespace WpfApp1.ViewModels
                 var dir = new DirectoryInfo(AppContext.BaseDirectory);
                 while (dir != null)
                 {
-                    var candidate = Path.Combine(dir.FullName, "WpfApp1.csproj");
+                    var candidate = Path.Combine(dir.FullName, "AppContext.BaseDirectory/Resources");
                     if (File.Exists(candidate))
                         return dir.FullName; // 返回包含 .csproj 的目录（项目根）
                     dir = dir.Parent;
@@ -295,15 +310,16 @@ namespace WpfApp1.ViewModels
 
         private void ActivateMod(Mod mod)
         {
-            if (mod == null) return;
-            // 简单的"激活"示例：将选中 mod 标记为 Enabled 并把其他 mod 设为 Disabled
-            if (SelectedCharacter != null)
-            {
-                foreach (var m in SelectedCharacter.Mods)
-                {
-                    m.Enabled = m == mod;
-                }
-            }
+            if (mod == null || SelectedCharacter == null)
+                return;
+
+            foreach (var item in SelectedCharacter.Mods.Where(x => x.Enabled && x != mod).ToList())
+                ToggleMod(item); // 实际改名为 DISABLED_ 前缀
+
+            if (!mod.Enabled)
+                ToggleMod(mod);  // 实际去除 DISABLED_ 前缀
+
+            SelectedMod = mod;
             SaveState();
         }
 
@@ -526,6 +542,7 @@ namespace WpfApp1.ViewModels
         {
             try
             {
+                Directory.CreateDirectory(StateDirectory);
                 var snap = new StateSnapshot
                 {
                     Games = Games.ToArray(),

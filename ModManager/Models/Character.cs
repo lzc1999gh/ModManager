@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace WpfApp1.Models
+namespace ModManager.Models
 {
     public class Character : INotifyPropertyChanged
     {

@@ -1,6 +1,6 @@
 using System.Windows.Controls;
 
-namespace WpfApp1.Views
+namespace ModManager.Views
 {
     public partial class CharacterView : System.Windows.Controls.UserControl
     {

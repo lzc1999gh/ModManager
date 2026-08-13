@@ -8,11 +8,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using WpfApp1.ViewModels;
+using ModManager.ViewModels;
 using Ookii.Dialogs.Wpf;
 using System.IO;
 
-namespace WpfApp1
+namespace ModManager
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -62,6 +62,11 @@ namespace WpfApp1
                         vm.LoadFromModsRoot(vm.SelectedGame.ModsRootPath);
                 }
             }
+        }
+
+        private void ModPreviewView_Loaded(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }
