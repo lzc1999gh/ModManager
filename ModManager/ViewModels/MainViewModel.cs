@@ -1,5 +1,7 @@
 using ModManager.Models;
 using System;
+using System.Collections.Generic;
+using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -97,6 +99,10 @@ namespace ModManager.ViewModels
         public ICommand OpenModsRootCommand { get; }
         public ICommand RefreshModsCommand { get; }
         public ICommand ToggleShowOnlyWithModsCommand { get; }
+        public ICommand AddPreviewCommand { get; }
+        public ICommand DeletePreviewCommand { get; }
+        public ICommand PrevPreviewCommand { get; }
+        public ICommand NextPreviewCommand { get; }
 
         private bool _showOnlyWithMods;
         public bool ShowOnlyWithMods
@@ -126,6 +132,10 @@ namespace ModManager.ViewModels
             OpenModsRootCommand = new RelayCommand(p => OpenModsRoot(), p => !string.IsNullOrEmpty(ModsRootPath));
             RefreshModsCommand = new RelayCommand(p => RefreshMods(), p => !string.IsNullOrEmpty(ModsRootPath));
             ToggleShowOnlyWithModsCommand = new RelayCommand(p => { ShowOnlyWithMods = !ShowOnlyWithMods; }, p => true);
+            AddPreviewCommand = new RelayCommand(p => AddPreview());
+            DeletePreviewCommand = new RelayCommand(p => DeletePreview());
+            PrevPreviewCommand = new RelayCommand(p => PrevPreview());
+            NextPreviewCommand = new RelayCommand(p => NextPreview());
 
             // 初始化可选游戏列表，使用项目内 Resources 路径（相对于运行目录）
             var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
@@ -402,9 +412,10 @@ namespace ModManager.ViewModels
                         Id = Guid.NewGuid().ToString(),
                         Name = displayName,
                         FilePath = modDir,
-                        PreviewPath = FindPreviewInDirectory(modDir),
                         Enabled = enabled
                     };
+                    foreach (var p in FindPreviewsInDirectory(modDir))
+                        mod.PreviewPaths.Add(p);
                     character.Mods.Add(mod);
                 }
 
@@ -428,9 +439,10 @@ namespace ModManager.ViewModels
                         Name = displayName,
                         FilePath = file,
                         Size = info.Length,
-                        PreviewPath = preview,
                         Enabled = enabled
                     };
+                    if (!string.IsNullOrEmpty(preview))
+                        mod.PreviewPaths.Add(preview);
                     character.Mods.Add(mod);
                 }
             }
@@ -443,17 +455,123 @@ namespace ModManager.ViewModels
             CharactersView?.Refresh();
         }
 
-        private string FindPreviewInDirectory(string dir)
+        // 查找目录下的预览图列表：优先 preview_ 前缀，无则返回所有图片
+        private List<string> FindPreviewsInDirectory(string dir)
         {
-            // 寻找常见的预览图片文件
+            var result = new List<string>();
+            if (!Directory.Exists(dir)) return result;
             var exts = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
-            foreach (var f in Directory.EnumerateFiles(dir))
+
+            var previewFiles = Directory.EnumerateFiles(dir)
+                .Where(f => Path.GetFileName(f).StartsWith("preview_", StringComparison.OrdinalIgnoreCase))
+                .Where(f => Array.IndexOf(exts, Path.GetExtension(f).ToLowerInvariant()) >= 0)
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+
+            result.AddRange(previewFiles);
+
+            if (result.Count == 0)
             {
-                var ext = Path.GetExtension(f).ToLowerInvariant();
-                if (Array.IndexOf(exts, ext) >= 0)
-                    return f;
+                var allImages = Directory.EnumerateFiles(dir)
+                    .Where(f => Array.IndexOf(exts, Path.GetExtension(f).ToLowerInvariant()) >= 0)
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+                result.AddRange(allImages);
             }
-            return null;
+            return result;
+        }
+
+        // 获取 mod 所在的文件夹路径（FilePath 是目录则用目录本身，是文件则用其父目录）
+        private string GetModFolder(Mod mod)
+        {
+            if (mod == null || string.IsNullOrEmpty(mod.FilePath)) return null;
+            if (Directory.Exists(mod.FilePath)) return mod.FilePath;
+            return Path.GetDirectoryName(mod.FilePath);
+        }
+
+        // 生成下一个 preview_x.png 路径（x = 现有最大序号 + 1）
+        private string GetNextPreviewPath(string folder)
+        {
+            int max = 0;
+            if (Directory.Exists(folder))
+            {
+                foreach (var f in Directory.EnumerateFiles(folder, "preview_*"))
+                {
+                    var name = Path.GetFileNameWithoutExtension(f);
+                    var numStr = name.Substring("preview_".Length);
+                    if (int.TryParse(numStr, out var n) && n > max)
+                        max = n;
+                }
+            }
+            return Path.Combine(folder, $"preview_{max + 1}.png");
+        }
+
+        private void AddPreview()
+        {
+            var mod = SelectedMod;
+            if (mod == null) return;
+            var folder = GetModFolder(mod);
+            if (string.IsNullOrEmpty(folder)) return;
+
+            if (!Clipboard.ContainsImage())
+            {
+                MessageBox.Show("剪贴板中没有图片", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            var bmp = Clipboard.GetImage();
+            if (bmp == null) return;
+
+            var newPath = GetNextPreviewPath(folder);
+            try
+            {
+                var encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(bmp));
+                using (var fs = File.Create(newPath))
+                    encoder.Save(fs);
+            }
+            catch
+            {
+                MessageBox.Show("保存预览图片失败", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (mod.PreviewPaths == null) mod.PreviewPaths = new ObservableCollection<string>();
+            mod.PreviewPaths.Add(newPath);
+            mod.CurrentPreviewIndex = mod.PreviewPaths.Count - 1;
+            SaveState();
+        }
+
+        private void DeletePreview()
+        {
+            var mod = SelectedMod;
+            if (mod == null) return;
+            var current = mod.CurrentPreviewPath;
+            if (string.IsNullOrEmpty(current)) return;
+
+            try { if (File.Exists(current)) File.Delete(current); } catch { }
+
+            if (mod.PreviewPaths != null && mod.PreviewPaths.Count > 0)
+            {
+                int idx = mod.CurrentPreviewIndex;
+                if (idx >= 0 && idx < mod.PreviewPaths.Count)
+                    mod.PreviewPaths.RemoveAt(idx);
+                mod.CurrentPreviewIndex = Math.Min(mod.CurrentPreviewIndex, mod.PreviewPaths.Count - 1);
+            }
+            SaveState();
+        }
+
+        private void PrevPreview()
+        {
+            var mod = SelectedMod;
+            if (mod == null || mod.PreviewPaths == null || mod.PreviewPaths.Count <= 1) return;
+            int n = mod.PreviewPaths.Count;
+            mod.CurrentPreviewIndex = (mod.CurrentPreviewIndex - 1 + n) % n;
+        }
+
+        private void NextPreview()
+        {
+            var mod = SelectedMod;
+            if (mod == null || mod.PreviewPaths == null || mod.PreviewPaths.Count <= 1) return;
+            int n = mod.PreviewPaths.Count;
+            mod.CurrentPreviewIndex = (mod.CurrentPreviewIndex + 1) % n;
         }
 
         // 导入文件到指定角色目录
@@ -473,7 +591,9 @@ namespace ModManager.ViewModels
                         var dest = Path.Combine(targetDir, Path.GetFileName(p));
                         // 简单复制目录（不处理冲突）
                         CopyDirectory(p, dest);
-                        var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(p), FilePath = dest, PreviewPath = FindPreviewInDirectory(dest) };
+                        var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(p), FilePath = dest };
+                        foreach (var pp in FindPreviewsInDirectory(dest))
+                            mod.PreviewPaths.Add(pp);
                         target.Mods.Add(mod);
                     }
                     else if (File.Exists(p))
@@ -504,7 +624,9 @@ namespace ModManager.ViewModels
                                 continue;
                             }
 
-                            var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(dest), FilePath = dest, PreviewPath = FindPreviewInDirectory(dest), Enabled = true };
+                            var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(dest), FilePath = dest, Enabled = true };
+                            foreach (var pp in FindPreviewsInDirectory(dest))
+                                mod.PreviewPaths.Add(pp);
                             target.Mods.Add(mod);
                         }
                         else

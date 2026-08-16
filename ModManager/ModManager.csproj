@@ -30,4 +30,13 @@
     <Folder Include="Resources\CharacterPic\WW\" />
     <Folder Include="Resources\CharacterPic\GI\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Resources\Icons\next.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="Resources\Icons\prev.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
