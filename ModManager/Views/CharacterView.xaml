@@ -3,12 +3,43 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+    xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
     xmlns:conv="clr-namespace:ModManager.Converters"
     xmlns:conv2="clr-namespace:ModManager.Converters"
     mc:Ignorable="d">
     <UserControl.Resources>
         <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
         <conv2:IntGreaterThanZeroToVisibilityConverter x:Key="IntGtZeroToVis" />
+        <Style x:Key="RoundedImageToggleButton" TargetType="ToggleButton">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E8F7ED" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#33CC66" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#3399FF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -20,9 +51,9 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="角色" FontWeight="Bold" Margin="6" VerticalAlignment="Center" />
-            <ToggleButton Grid.Column="1" Width="20" Height="20" Margin="2" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色">
-                <Image Width="19" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/sw.png" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center" />
+            <ToggleButton Grid.Column="1" Style="{StaticResource RoundedImageToggleButton}" Margin="2" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色" BorderThickness="1">
+                <svg:SvgViewbox Width="18" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/sw.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </ToggleButton>
         </Grid>
 
@@ -30,16 +61,26 @@
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <!-- 使用横向 WrapPanel 并设置 ItemWidth，这样会自动换行形成多列并支持纵向滚动 -->
-                    <WrapPanel IsItemsHost="True" Orientation="Horizontal" ItemWidth="75" ItemHeight="90" />
+                    <WrapPanel IsItemsHost="True" Orientation="Horizontal" ItemWidth="70" ItemHeight="80" />
                 </ItemsPanelTemplate>
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Width="96" Margin="2" HorizontalAlignment="Center">
-                        <Border Width="50" Height="50" CornerRadius="8" Background="#222" HorizontalAlignment="Center">
+                    <StackPanel Width="70" Margin="2" HorizontalAlignment="Center">
+                        
+                        <StackPanel.ToolTip>
+                            <ToolTip>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                    <TextBlock Text="{Binding ModCount, StringFormat=Mod数量: {0}}" />
+                                </StackPanel>
+                            </ToolTip>
+                        </StackPanel.ToolTip>
+                        
+                        <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center">
                              <Image Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}}" Stretch="UniformToFill" />
                         </Border>
-                        <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Width="90" Margin="0,2,0,0">
+                        <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Width="70" >
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <!-- 默认颜色（可根据主题调整，这里设为黑色） -->

@@ -68,5 +68,10 @@ namespace ModManager
         {
 
         }
+
+        private void ModDetailView_Loaded(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

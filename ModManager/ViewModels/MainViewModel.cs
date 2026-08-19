@@ -1,6 +1,7 @@
 using ModManager.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Media.Imaging;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -27,6 +28,7 @@ namespace ModManager.ViewModels
         private static readonly string StateFile = Path.Combine(
             StateDirectory,
             "modstate.json");
+        private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
         public ObservableCollection<Game> Games { get; } = new ObservableCollection<Game>();
         public ObservableCollection<Character> Characters { get; } = new ObservableCollection<Character>();
 
@@ -83,14 +85,53 @@ namespace ModManager.ViewModels
         public Character SelectedCharacter
         {
             get => _selectedCharacter;
-            set { _selectedCharacter = value; OnPropertyChanged(); }
+            set
+            {
+                if (_selectedCharacter == value) return;
+
+                _selectedCharacter = value;
+                OnPropertyChanged();
+                SelectedMod = value?.Mods.FirstOrDefault(mod => mod.Enabled) ?? value?.Mods.FirstOrDefault();
+            }
         }
 
         private Mod _selectedMod;
         public Mod SelectedMod
         {
             get => _selectedMod;
-            set { _selectedMod = value; OnPropertyChanged(); }
+            set
+            {
+                _selectedMod = value;
+                OnPropertyChanged();
+                ReadIniFile(showMissingMessage: false);
+            }
+        }
+        private void OpenModFolder(object parameter)
+        {
+            if (SelectedMod == null)
+                return;
+
+            var path = SelectedMod.FilePath;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+
+            if (File.Exists(path))
+            {
+                path = Path.GetDirectoryName(path);
+            }
+
+
+            if (!string.IsNullOrWhiteSpace(path) &&
+                Directory.Exists(path))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
         }
 
         public ICommand ToggleModCommand { get; }
@@ -103,6 +144,21 @@ namespace ModManager.ViewModels
         public ICommand DeletePreviewCommand { get; }
         public ICommand PrevPreviewCommand { get; }
         public ICommand NextPreviewCommand { get; }
+        public ICommand DeleteModCommand { get; }
+        public ICommand ReadIniCommand { get; }
+        public ICommand OpenIniCommand { get; }
+        public ICommand OpenModFolderCommand { get; }
+        private bool _showIniContent;
+        public bool ShowIniContent
+        {
+            get => _showIniContent;
+            set
+            {
+                if (_showIniContent == value) return;
+                _showIniContent = value;
+                OnPropertyChanged();
+            }
+        }
 
         private bool _showOnlyWithMods;
         public bool ShowOnlyWithMods
@@ -126,7 +182,14 @@ namespace ModManager.ViewModels
 
         public MainViewModel()
         {
-            ToggleModCommand = new RelayCommand(p => ToggleMod(p as Mod), p => p is Mod);
+            ToggleModCommand = new RelayCommand(
+                p =>
+                {
+                    if (p is not Mod mod) return;
+                    SelectedMod = mod;
+                    ToggleMod(mod);
+                },
+                p => p is Mod);
             ActivateModCommand = new RelayCommand(p => ActivateMod(p as Mod), p => p is Mod);
             // commands for apply/clear removed; settings handled in MainWindow
             OpenModsRootCommand = new RelayCommand(p => OpenModsRoot(), p => !string.IsNullOrEmpty(ModsRootPath));
@@ -136,6 +199,10 @@ namespace ModManager.ViewModels
             DeletePreviewCommand = new RelayCommand(p => DeletePreview());
             PrevPreviewCommand = new RelayCommand(p => PrevPreview());
             NextPreviewCommand = new RelayCommand(p => NextPreview());
+            DeleteModCommand = new RelayCommand(p => DeleteMod(), p => SelectedMod != null);
+            ReadIniCommand = new RelayCommand(p => ReadIniFile(showMissingMessage: true), p => SelectedMod != null);
+            OpenIniCommand = new RelayCommand(p => OpenIniFile(), p => SelectedMod != null);
+            OpenModFolderCommand = new RelayCommand(OpenModFolder);
 
             // 初始化可选游戏列表，使用项目内 Resources 路径（相对于运行目录）
             var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
@@ -225,23 +292,6 @@ namespace ModManager.ViewModels
             return c.Mods != null && c.Mods.Count > 0;
         }
 
-        private string GetProjectRoot()
-        {
-            try
-            {
-                var dir = new DirectoryInfo(AppContext.BaseDirectory);
-                while (dir != null)
-                {
-                    var candidate = Path.Combine(dir.FullName, "AppContext.BaseDirectory/Resources");
-                    if (File.Exists(candidate))
-                        return dir.FullName; // 返回包含 .csproj 的目录（项目根）
-                    dir = dir.Parent;
-                }
-            }
-            catch { }
-            return null;
-        }
-
         // ApplyModsRoot and ClearModsRoot removed; use MainWindow folder picker to set ModsRootPath
 
         private void OpenModsRoot()
@@ -285,6 +335,7 @@ namespace ModManager.ViewModels
                         dest = Path.Combine(parent, newName + "_" + Guid.NewGuid().ToString("N"));
                     }
                     Directory.Move(path, dest);
+                    UpdatePreviewPathsAfterMove(mod, path, dest, movedDirectory: true);
                     mod.FilePath = dest;
                     var display = Path.GetFileName(dest);
                     if (display.StartsWith("DISABLED_")) display = display.Substring("DISABLED_".Length);
@@ -307,6 +358,7 @@ namespace ModManager.ViewModels
                         dest = Path.Combine(parent, newName + "_" + Guid.NewGuid().ToString("N"));
                     }
                     File.Move(path, dest);
+                    UpdatePreviewPathsAfterMove(mod, path, dest, movedDirectory: false);
                     mod.FilePath = dest;
                     var display = Path.GetFileName(dest);
                     if (display.StartsWith("DISABLED_")) display = display.Substring("DISABLED_".Length);
@@ -343,6 +395,14 @@ namespace ModManager.ViewModels
                     var doc = JsonSerializer.Deserialize<StateSnapshot>(json);
                     if (doc != null)
                     {
+                        foreach (var savedMod in doc.Characters?
+                                     .Where(character => character.Mods != null)
+                                     .SelectMany(character => character.Mods)
+                                     .Where(mod => !string.IsNullOrWhiteSpace(mod.FilePath)))
+                        {
+                            _sourcesByModPath[savedMod.FilePath] = savedMod.Source;
+                        }
+
                         Games.Clear();
                         foreach (var g in doc.Games) Games.Add(g);
                         // 保持现有 Characters 不被持久化数据覆盖（角色来源于游戏资源）
@@ -416,6 +476,7 @@ namespace ModManager.ViewModels
                     };
                     foreach (var p in FindPreviewsInDirectory(modDir))
                         mod.PreviewPaths.Add(p);
+                    ApplySavedSource(mod);
                     character.Mods.Add(mod);
                 }
 
@@ -443,6 +504,7 @@ namespace ModManager.ViewModels
                     };
                     if (!string.IsNullOrEmpty(preview))
                         mod.PreviewPaths.Add(preview);
+                    ApplySavedSource(mod);
                     character.Mods.Add(mod);
                 }
             }
@@ -462,20 +524,39 @@ namespace ModManager.ViewModels
             if (!Directory.Exists(dir)) return result;
             var exts = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
 
-            var previewFiles = Directory.EnumerateFiles(dir)
-                .Where(f => Path.GetFileName(f).StartsWith("preview_", StringComparison.OrdinalIgnoreCase))
-                .Where(f => Array.IndexOf(exts, Path.GetExtension(f).ToLowerInvariant()) >= 0)
-                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
+            // 递归搜索当前 Mod 目录以及所有子文件夹
+            var allFiles = Directory.EnumerateFiles(
+                    dir,
+                    "*.*",
+                    SearchOption.AllDirectories)
+                .Where(f =>
+                    Array.IndexOf(
+                        exts,
+                        Path.GetExtension(f).ToLowerInvariant()) >= 0)
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            result.AddRange(previewFiles);
+            // 第一优先级：
+            // 所有目录中名字以 preview_ 开头的图片
+            var previewFiles = allFiles
+                .Where(f =>
+                    Path.GetFileNameWithoutExtension(f)
+                        .StartsWith(
+                            "preview_",
+                            StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            if (result.Count == 0)
+            if (previewFiles.Count > 0)
             {
-                var allImages = Directory.EnumerateFiles(dir)
-                    .Where(f => Array.IndexOf(exts, Path.GetExtension(f).ToLowerInvariant()) >= 0)
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
-                result.AddRange(allImages);
+                result.AddRange(previewFiles);
             }
+            else
+            {
+                // 如果没有 preview_ 图片，
+                // 则使用所有子目录中的图片
+                result.AddRange(allFiles);
+            }
+
             return result;
         }
 
@@ -589,7 +670,9 @@ namespace ModManager.ViewModels
                     if (Directory.Exists(p))
                     {
                         var dest = Path.Combine(targetDir, Path.GetFileName(p));
-                        // 简单复制目录（不处理冲突）
+                        if (!ConfirmOverwrite(dest))
+                            continue;
+
                         CopyDirectory(p, dest);
                         var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(p), FilePath = dest };
                         foreach (var pp in FindPreviewsInDirectory(dest))
@@ -604,10 +687,9 @@ namespace ModManager.ViewModels
                             // 解压 zip 到角色目录下的一个子文件夹，名称为压缩包名（不含扩展名）
                             var modFolderName = Path.GetFileNameWithoutExtension(p);
                             var dest = Path.Combine(targetDir, modFolderName);
-                            if (Directory.Exists(dest) || File.Exists(dest))
-                            {
-                                dest = Path.Combine(targetDir, modFolderName + "_" + Guid.NewGuid().ToString("N"));
-                            }
+                            if (!ConfirmOverwrite(dest))
+                                continue;
+
                             Directory.CreateDirectory(dest);
                             try
                             {
@@ -616,8 +698,14 @@ namespace ModManager.ViewModels
                             catch
                             {
                                 // 如果解压失败，尝试直接复制文件作为备用
+                                if (Directory.Exists(dest))
+                                    Directory.Delete(dest, recursive: true);
+
                                 var fallback = Path.Combine(targetDir, Path.GetFileName(p));
-                                File.Copy(p, fallback, overwrite: true);
+                                if (!ConfirmOverwrite(fallback))
+                                    continue;
+
+                                File.Copy(p, fallback);
                                 var infoF = new FileInfo(fallback);
                                 var modF = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(fallback), FilePath = fallback, Size = infoF.Length };
                                 target.Mods.Add(modF);
@@ -632,7 +720,10 @@ namespace ModManager.ViewModels
                         else
                         {
                             var dest = Path.Combine(targetDir, Path.GetFileName(p));
-                            File.Copy(p, dest, overwrite: true);
+                            if (!ConfirmOverwrite(dest))
+                                continue;
+
+                            File.Copy(p, dest);
                             var info = new FileInfo(dest);
                             var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = Path.GetFileName(dest), FilePath = dest, Size = info.Length };
                             target.Mods.Add(mod);
@@ -643,6 +734,244 @@ namespace ModManager.ViewModels
             }
 
             SaveState();
+        }
+
+        private void DeleteMod()
+        {
+            var mod = SelectedMod;
+            var character = SelectedCharacter;
+            if (mod == null || character == null || string.IsNullOrWhiteSpace(mod.FilePath)) return;
+
+            var result = MessageBox.Show(
+                $"确定要删除 Mod“{mod.Name}”吗？此操作会删除磁盘上的文件，无法撤销。",
+                "删除 Mod",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                if (Directory.Exists(mod.FilePath))
+                    Directory.Delete(mod.FilePath, recursive: true);
+                else if (File.Exists(mod.FilePath))
+                    File.Delete(mod.FilePath);
+
+                character.Mods.Remove(mod);
+                SelectedMod = character.Mods.FirstOrDefault(m => m.Enabled) ?? character.Mods.FirstOrDefault();
+                SaveState();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"删除 Mod 失败：{ex.Message}", "删除 Mod", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void CommitModRename(Mod mod)
+        {
+            var originalName = mod.OriginalNameDuringEdit;
+            var requestedName = mod.Name?.Trim();
+            mod.OriginalNameDuringEdit = null;
+
+            if (string.IsNullOrWhiteSpace(originalName) || string.Equals(originalName, requestedName, StringComparison.Ordinal))
+                return;
+
+            if (string.IsNullOrWhiteSpace(requestedName) || requestedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                mod.Name = originalName;
+                MessageBox.Show("Mod 名称不能为空，也不能包含文件名非法字符。", "修改 Mod 名称", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                var oldPath = mod.FilePath;
+                var parent = Path.GetDirectoryName(oldPath);
+                if (string.IsNullOrWhiteSpace(parent) || string.IsNullOrWhiteSpace(oldPath))
+                    throw new InvalidOperationException("找不到 Mod 的原始路径。");
+
+                var oldRawName = Path.GetFileName(oldPath);
+                var disabledPrefix = oldRawName.StartsWith("DISABLED_", StringComparison.OrdinalIgnoreCase) ? "DISABLED_" : string.Empty;
+                var newPath = Path.Combine(parent, disabledPrefix + requestedName);
+
+                if (File.Exists(newPath) || Directory.Exists(newPath))
+                    throw new IOException("同名 Mod 已存在。");
+
+                if (Directory.Exists(oldPath))
+                {
+                    Directory.Move(oldPath, newPath);
+                    UpdatePreviewPathsAfterMove(mod, oldPath, newPath, movedDirectory: true);
+                }
+                else if (File.Exists(oldPath))
+                {
+                    File.Move(oldPath, newPath);
+                    UpdatePreviewPathsAfterMove(mod, oldPath, newPath, movedDirectory: false);
+                }
+                else
+                {
+                    throw new FileNotFoundException("原始 Mod 文件或目录不存在。", oldPath);
+                }
+
+                mod.FilePath = newPath;
+                mod.Name = requestedName;
+                _sourcesByModPath.Remove(oldPath);
+                _sourcesByModPath[newPath] = mod.Source;
+                SaveState();
+            }
+            catch (Exception ex)
+            {
+                mod.Name = originalName;
+                MessageBox.Show($"修改 Mod 名称失败：{ex.Message}", "修改 Mod 名称", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        public void SaveModSource(Mod mod)
+        {
+            if (string.IsNullOrWhiteSpace(mod.FilePath)) return;
+
+            _sourcesByModPath[mod.FilePath] = mod.Source;
+            SaveState();
+        }
+
+        private void ApplySavedSource(Mod mod)
+        {
+            if (!string.IsNullOrWhiteSpace(mod.FilePath) && _sourcesByModPath.TryGetValue(mod.FilePath, out var source))
+                mod.Source = source;
+        }
+
+        private void ReadIniFile(bool showMissingMessage)
+        {
+            var mod = SelectedMod;
+            if (mod == null) return;
+
+            var iniPath = FindIniFile(mod);
+            if (iniPath == null)
+            {
+                mod.IniFilePath = null;
+                mod.IniContent = null;
+                mod.IniShortcuts.Clear();
+                if (showMissingMessage)
+                    MessageBox.Show("当前 Mod 中未找到符合条件的 INI 文件。", "读取 INI", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                mod.IniFilePath = iniPath;
+                mod.IniContent = File.ReadAllText(iniPath);
+                LoadIniShortcuts(mod);
+                SaveState();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"读取 INI 失败：{ex.Message}", "读取 INI", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OpenIniFile()
+        {
+            var mod = SelectedMod;
+            if (mod == null) return;
+
+            var iniPath = FindIniFile(mod);
+            if (iniPath == null)
+            {
+                MessageBox.Show("当前 Mod 中未找到 INI 文件。", "打开 INI", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                mod.IniFilePath = iniPath;
+                Process.Start(new ProcessStartInfo(iniPath) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"打开 INI 失败：{ex.Message}", "打开 INI", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private string? FindIniFile(Mod mod)
+        {
+            var folder = GetModFolder(mod);
+            return string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)
+                ? null
+                : Directory.EnumerateFiles(folder, "*.ini", SearchOption.AllDirectories)
+                    .Where(path => !Path.GetFileName(path).Contains("disabled", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(path => new FileInfo(path).Length)
+                    .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+                    .FirstOrDefault();
+        }
+
+        private static void LoadIniShortcuts(Mod mod)
+        {
+            mod.IniShortcuts.Clear();
+            if (string.IsNullOrWhiteSpace(mod.IniContent)) return;
+
+            string? section = null;
+            foreach (var line in mod.IniContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                var text = line.Trim();
+                if (text.StartsWith("[") && text.EndsWith("]"))
+                {
+                    section = text[1..^1];
+                    continue;
+                }
+
+                if (section == null || !section.StartsWith("Key", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var separator = text.IndexOf('=');
+                if (separator <= 0) continue;
+
+                var key = text[..separator].Trim();
+                var value = text[(separator + 1)..].Trim();
+                if (!key.Equals("key", StringComparison.OrdinalIgnoreCase)) continue;
+
+                mod.IniShortcuts.Add(new IniShortcut { Key = $"{section}: {value}", Value = 0, OptionIndex = 0 });
+            }
+        }
+
+        private static void UpdatePreviewPathsAfterMove(Mod mod, string oldPath, string newPath, bool movedDirectory)
+        {
+            for (var index = 0; index < mod.PreviewPaths.Count; index++)
+            {
+                var previewPath = mod.PreviewPaths[index];
+                if (!movedDirectory && string.Equals(previewPath, oldPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    mod.PreviewPaths[index] = newPath;
+                    continue;
+                }
+
+                if (!movedDirectory || !previewPath.StartsWith(oldPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var relativePath = Path.GetRelativePath(oldPath, previewPath);
+                mod.PreviewPaths[index] = Path.Combine(newPath, relativePath);
+            }
+        }
+
+        // 目标不存在时直接继续；存在时由用户决定是否用导入内容替换。
+        private static bool ConfirmOverwrite(string destination)
+        {
+            if (!File.Exists(destination) && !Directory.Exists(destination))
+                return true;
+
+            var name = Path.GetFileName(destination);
+            var result = MessageBox.Show(
+                $"“{name}”已存在。是否覆盖？",
+                "导入 Mod",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+                return false;
+
+            if (Directory.Exists(destination))
+                Directory.Delete(destination, recursive: true);
+            else
+                File.Delete(destination);
+
+            return true;
         }
 
         private void CopyDirectory(string sourceDir, string destDir)

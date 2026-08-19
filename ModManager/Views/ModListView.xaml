@@ -4,6 +4,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:conv="clr-namespace:ModManager.Converters"
+    xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
     mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -37,6 +38,28 @@
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Center" />
                         </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ImageButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="3" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" /></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Border" Property="Background" Value="#E8F3FF" /></Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -76,13 +99,14 @@
             <Button
                 Grid.Column="1"
                 Command="{Binding RefreshModsCommand}"
+                Style="{StaticResource ImageButtonStyle}"
                 Margin="2"
                 VerticalAlignment="Center">
 
-                <Image
+                <svg:SvgViewbox
                     Width="18"
                     Height="18"
-                    Source="pack://siteoforigin:,,,/Resources/Icons/re.png" />
+                    Source="pack://siteoforigin:,,,/Resources/Icons/re.svg" />
             </Button>
         </Grid>
 
@@ -130,7 +154,7 @@
                                             <!-- 名称区域 -->
                                             <ColumnDefinition Width="*" />
                                             <!-- 状态区域 -->
-                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="40" />
                                         </Grid.ColumnDefinitions>
                                         <!-- 名称 -->
                                         <ContentPresenter
@@ -139,20 +163,43 @@
                                             VerticalAlignment="Center"
                                             Margin="12,0,6,0"
                                             RecognizesAccessKey="True" />
-                                        <!-- 状态显示 -->
-                                        <StackPanel
+                                        <!-- 状态切换按钮：保持右侧状态区域的原有宽度 -->
+                                        <ToggleButton
                                             Grid.Column="1"
-                                            Orientation="Horizontal"
-                                            HorizontalAlignment="Right"
+                                            Command="{Binding DataContext.ToggleModCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                            CommandParameter="{Binding}"
+                                            IsChecked="{Binding Enabled, Mode=OneWay}"
+                                            HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            Margin="0,0,12,0">
-                                            <Ellipse
-                                                Width="12"
-                                                Height="12"
-                                                Fill="#33CC66"
-                                                Visibility="{Binding Enabled, Converter={StaticResource BoolToVis}}"
-                                                Margin="0,0,6,0" />
-                                        </StackPanel>
+                                            Width="34"
+                                            Height="20"
+                                            Cursor="Hand"
+                                            ToolTip="启用 / 禁用">
+                                            <ToggleButton.Style>
+                                                <Style TargetType="ToggleButton">
+                                                    <Setter Property="Template">
+                                                        <Setter.Value>
+                                                            <ControlTemplate TargetType="ToggleButton">
+                                                                <Grid Width="34" Height="20">
+                                                                    <Border x:Name="Track" Background="#A8A8A8" CornerRadius="10" />
+                                                                    <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" Margin="2"
+                                                                             HorizontalAlignment="Left" VerticalAlignment="Center" />
+                                                                </Grid>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsChecked" Value="True">
+                                                                        <Setter TargetName="Track" Property="Background" Value="#33CC66" />
+                                                                        <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Track" Property="Opacity" Value="0.85" />
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </ToggleButton.Style>
+                                        </ToggleButton>
                                     </Grid>
                                 </Border>
                                 <ControlTemplate.Triggers>
@@ -193,16 +240,10 @@
                                             Value="#666666" />
 
                                     </Trigger>
-
                                 </ControlTemplate.Triggers>
-
                             </ControlTemplate>
                         </Setter.Value>
                     </Setter>
-
-                    <EventSetter
-                        Event="PreviewMouseLeftButtonUp"
-                        Handler="ListBoxItem_PreviewMouseLeftButtonUp" />
 
                 </Style>
 
@@ -215,7 +256,13 @@
             <!-- Mod 名称 -->
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" HorizontalAlignment="Stretch" Foreground="Black" FontSize="13" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    <TextBlock Text="{Binding Name}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Stretch"
+                               Foreground="Black"
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis"
+                               TextWrapping="NoWrap" />
                 </DataTemplate>
             </ListBox.ItemTemplate>
 

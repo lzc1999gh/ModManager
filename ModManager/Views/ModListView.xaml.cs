@@ -35,18 +35,5 @@ namespace ModManager.Views
             vm.ImportFiles(files, target);
         }
 
-        private void ListBoxItem_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            var lbi = sender as System.Windows.Controls.ListBoxItem;
-            if (lbi == null) return;
-            var mod = lbi.DataContext as Mod;
-            if (mod == null) return;
-            var vm = this.DataContext as MainViewModel;
-            if (vm == null) return;
-            // 优化：单击即选中并切换启用状态（单次点击完成切换）
-            vm.SelectedMod = mod;
-            vm.ToggleModCommand.Execute(mod);
-            e.Handled = true;
-        }
     }
 }

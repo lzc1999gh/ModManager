@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
@@ -10,6 +11,11 @@ namespace ModManager.Models
     public class Mod : INotifyPropertyChanged
     {
         private bool _enabled;
+        public Mod()
+        {
+            _previewPaths.CollectionChanged += PreviewPaths_CollectionChanged;
+        }
+
         public string Id { get; set; }
         private string? _name;
         public string? Name
@@ -43,11 +49,72 @@ namespace ModManager.Models
             set
             {
                 if (_previewPaths == value) return;
+                _previewPaths.CollectionChanged -= PreviewPaths_CollectionChanged;
                 _previewPaths = value ?? new ObservableCollection<string>();
+                _previewPaths.CollectionChanged += PreviewPaths_CollectionChanged;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CurrentPreviewPath));
                 OnPropertyChanged(nameof(PreviewPath));
             }
+        }
+
+        private string? _source;
+        public string? Source
+        {
+            get => _source;
+            set
+            {
+                if (_source == value) return;
+                _source = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private bool _isEditingName;
+        [JsonIgnore]
+        public bool IsEditingName
+        {
+            get => _isEditingName;
+            set
+            {
+                if (_isEditingName == value) return;
+                _isEditingName = value;
+                OnPropertyChanged();
+            }
+        }
+
+        [JsonIgnore]
+        public string? OriginalNameDuringEdit { get; set; }
+
+        private string? _iniFilePath;
+        public string? IniFilePath
+        {
+            get => _iniFilePath;
+            set
+            {
+                if (_iniFilePath == value) return;
+                _iniFilePath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private string? _iniContent;
+        [JsonIgnore]
+        public string? IniContent
+        {
+            get => _iniContent;
+            set
+            {
+                if (_iniContent == value) return;
+                _iniContent = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private void PreviewPaths_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(CurrentPreviewPath));
+            OnPropertyChanged(nameof(PreviewPath));
         }
 
         private int _currentPreviewIndex;
