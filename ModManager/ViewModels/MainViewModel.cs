@@ -1,5 +1,6 @@
-﻿using ModManager.Models;
+using ModManager.Models;
 using ModManager.Services;
+using ModManager.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,6 +15,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using Microsoft.Win32;
 
 namespace ModManager.ViewModels
 {
@@ -23,6 +25,9 @@ namespace ModManager.ViewModels
         private static readonly string StateFile = Path.Combine(StateDirectory, "modstate.json");
         private readonly GimiPersistService _gimiPersistService;
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<Character>> _charactersByGame = new(StringComparer.OrdinalIgnoreCase);
+        // 列表末尾的“新增角色”占位项，始终保持在角色列表最后一位
+        private readonly Character _addPlaceholder;
 
         // =========================================================
         // Collections
@@ -53,6 +58,7 @@ namespace ModManager.ViewModels
             set
             {
                 if (_selectedGame == value) return;
+                SaveCurrentCharactersToCache();
                 _selectedGame = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ModsRootPath));
@@ -111,6 +117,8 @@ namespace ModManager.ViewModels
         public ICommand ReadIniCommand { get; }
         public ICommand OpenIniCommand { get; }
         public ICommand OpenModFolderCommand { get; }
+        public ICommand AddCharacterCommand { get; }
+        public ICommand AddCharacterIconCommand { get; }
 
         // =========================================================
         // UI State
@@ -156,6 +164,7 @@ namespace ModManager.ViewModels
         public MainViewModel()
         {
             _gimiPersistService = new GimiPersistService(@"H:\XXMI Launcher\GIMI\d3dx_user.ini");
+            _addPlaceholder = new Character { Id = Guid.NewGuid().ToString(), Name = "", IsAddPlaceholder = true };
 
             ToggleModCommand = new RelayCommand(p =>
             {
@@ -176,6 +185,11 @@ namespace ModManager.ViewModels
             ReadIniCommand = new RelayCommand(p => ReadIniFile(showMissingMessage: true), p => SelectedMod != null);
             OpenIniCommand = new RelayCommand(p => OpenIniFile(), p => SelectedMod != null);
             OpenModFolderCommand = new RelayCommand(OpenModFolder, p => SelectedMod != null);
+            AddCharacterCommand = new RelayCommand(p => AddCharacter());
+            AddCharacterIconCommand = new RelayCommand(p =>
+            {
+                if (p is Character character) AddCharacterIcon(character);
+            }, p => p is Character character && !character.IsAddPlaceholder);
 
             var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
             Games.Add(new Game { Id = "GI", Name = "GI", Path = Path.Combine(resourceRoot, "GI") });
@@ -213,28 +227,118 @@ namespace ModManager.ViewModels
         }
 
         // =========================================================
-        // Character Icons
+        // Character Information and Icons
         // =========================================================
-        public void LoadCharacterIconsFromFolders(string[] folders)
+        private static readonly string[] CharacterImageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
+
+        private string GetCharacterInfoPath(Game game)
         {
-            if (folders == null) return;
-            Characters.Clear();
-            foreach (var folder in folders)
+            var directory = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo");
+            var gameId = game?.Id;
+            if (string.IsNullOrWhiteSpace(gameId)) gameId = game?.Name;
+            if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
+            foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
+            return Path.Combine(directory, gameId + ".json");
+        }
+
+        private List<CharacterInfo> ReadCharacterInfoFile(Game game)
+        {
+            var infoPath = GetCharacterInfoPath(game);
+            if (File.Exists(infoPath))
             {
-                if (!Directory.Exists(folder)) continue;
-                foreach (var filePath in Directory.EnumerateFiles(folder, "*.png"))
+                try
                 {
-                    try
+                    var infos = JsonSerializer.Deserialize<List<CharacterInfo>>(File.ReadAllText(infoPath));
+                    if (infos != null)
                     {
-                        var name = Path.GetFileNameWithoutExtension(filePath);
-                        var character = new Character { Id = Guid.NewGuid().ToString(), Name = name, IconPath = filePath };
-                        Characters.Add(character);
+                        return infos
+                            .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
+                            .GroupBy(info => info.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                            .Select(group => group.First())
+                            .ToList();
                     }
-                    catch { }
+                }
+                catch { }
+            }
+
+            // 兼容旧版本：首次升级时从现有头像生成角色信息文件；之后列表不再依赖头像。
+            var generated = new List<CharacterInfo>();
+            if (!string.IsNullOrWhiteSpace(game?.Path) && Directory.Exists(game.Path))
+            {
+                foreach (var filePath in Directory.EnumerateFiles(game.Path)
+                    .Where(path => CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)))
+                {
+                    var name = Path.GetFileNameWithoutExtension(filePath);
+                    if (string.IsNullOrWhiteSpace(name) || generated.Any(info => string.Equals(info.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
+                    generated.Add(new CharacterInfo { Id = Guid.NewGuid().ToString(), Name = name });
                 }
             }
-            SelectedCharacter = Characters.FirstOrDefault();
-            SaveState();
+            SaveCharacterInfoFile(game, generated, showError: false);
+            return generated;
+        }
+
+        private bool SaveCharacterInfoFile(Game game, IEnumerable<CharacterInfo> infos, bool showError = true)
+        {
+            try
+            {
+                var infoPath = GetCharacterInfoPath(game);
+                Directory.CreateDirectory(Path.GetDirectoryName(infoPath));
+                var normalized = infos
+                    .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
+                    .Select(info => new CharacterInfo
+                    {
+                        Id = string.IsNullOrWhiteSpace(info.Id) ? Guid.NewGuid().ToString() : info.Id,
+                        Name = info.Name.Trim()
+                    })
+                    .GroupBy(info => info.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList();
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(infoPath, JsonSerializer.Serialize(normalized, options));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (showError)
+                {
+                    MessageBox.Show($"保存角色信息失败：{ex.Message}", "角色", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                return false;
+            }
+        }
+
+        private string FindCharacterIcon(Game game, string characterName)
+        {
+            if (string.IsNullOrWhiteSpace(game?.Path) || !Directory.Exists(game.Path)) return null;
+            foreach (var extension in CharacterImageExtensions)
+            {
+                var path = Path.Combine(game.Path, characterName + extension);
+                if (File.Exists(path)) return path;
+            }
+            return Directory.EnumerateFiles(game.Path)
+                .FirstOrDefault(path => CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
+                    && string.Equals(Path.GetFileNameWithoutExtension(path), characterName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private List<Character> GetCachedCharacters(string gameId)
+        {
+            return gameId != null && _charactersByGame.TryGetValue(gameId, out var characters)
+                ? characters
+                : new List<Character>();
+        }
+
+        private void SaveCurrentCharactersToCache()
+        {
+            if (_selectedGame == null) return;
+            _charactersByGame[_selectedGame.Id ?? _selectedGame.Name ?? string.Empty] = Characters
+                .Where(character => !character.IsAddPlaceholder)
+                .ToList();
+        }
+
+        // 保留旧方法作为内部兼容入口，但真正的角色来源已改为角色信息文件。
+        public void LoadCharacterIconsFromFolders(string[] folders)
+        {
+            LoadCharactersForGame(SelectedGame);
         }
 
         // =========================================================
@@ -242,16 +346,137 @@ namespace ModManager.ViewModels
         // =========================================================
         public void LoadCharactersForGame(Game game)
         {
+            Characters.Clear();
+            SelectedCharacter = null;
             if (game == null) return;
-            var folder = game.Path;
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+
+            var cached = GetCachedCharacters(game.Id ?? game.Name ?? string.Empty);
+            var infos = ReadCharacterInfoFile(game);
+            var characters = new List<Character>();
+            var infoChanged = false;
+
+            foreach (var info in infos)
             {
-                Characters.Clear();
-                SelectedCharacter = null;
+                info.Id ??= Guid.NewGuid().ToString();
+                var saved = cached.FirstOrDefault(character =>
+                    (!string.IsNullOrWhiteSpace(info.Id) && string.Equals(character.Id, info.Id, StringComparison.OrdinalIgnoreCase))
+                    || string.Equals(character.Name, info.Name, StringComparison.OrdinalIgnoreCase));
+                var character = saved ?? new Character { Id = info.Id, Name = info.Name };
+                character.GameId = game.Id;
+                character.Name = info.Name;
+                character.IconPath = FindCharacterIcon(game, character.Name);
+                characters.Add(character);
+            }
+
+            // 将旧状态中尚未写入角色信息文件的角色迁移进去，避免升级后丢失新增角色。
+            foreach (var saved in cached)
+            {
+                if (characters.Any(character => string.Equals(character.Name, saved.Name, StringComparison.OrdinalIgnoreCase))) continue;
+                saved.GameId = game.Id;
+                saved.IconPath = FindCharacterIcon(game, saved.Name);
+                characters.Add(saved);
+                infos.Add(new CharacterInfo { Id = saved.Id, Name = saved.Name });
+                infoChanged = true;
+            }
+            if (infoChanged) SaveCharacterInfoFile(game, infos, showError: false);
+
+            foreach (var character in characters) Characters.Add(character);
+            Characters.Add(_addPlaceholder);
+            SelectedCharacter = Characters.FirstOrDefault(character => !character.IsAddPlaceholder);
+            CharactersView?.Refresh();
+        }
+
+        // =========================================================
+        // Add Character
+        // =========================================================
+        public void AddCharacter()
+        {
+            if (SelectedGame == null)
+            {
+                MessageBox.Show("请先选择游戏。", "新增角色", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            LoadCharacterIconsFromFolders(new[] { folder });
+
+            var dialog = new InputDialog("新增角色", "请输入角色名：")
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var name = dialog.ResultText;
+            if (string.IsNullOrWhiteSpace(name) || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                MessageBox.Show("角色名不能为空，也不能包含文件名非法字符。", "新增角色", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (Characters.Any(character => !character.IsAddPlaceholder && string.Equals(character.Name, name, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("该角色已经存在。", "新增角色", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var character = new Character
+            {
+                Id = Guid.NewGuid().ToString(),
+                GameId = SelectedGame.Id,
+                Name = name,
+                IconPath = FindCharacterIcon(SelectedGame, name)
+            };
+            var infos = Characters
+                .Where(item => !item.IsAddPlaceholder)
+                .Select(item => new CharacterInfo { Id = item.Id, Name = item.Name })
+                .Append(new CharacterInfo { Id = character.Id, Name = character.Name });
+            if (!SaveCharacterInfoFile(SelectedGame, infos)) return;
+
+            Characters.Remove(_addPlaceholder);
+            Characters.Add(character);
+            Characters.Add(_addPlaceholder);
+            SaveCurrentCharactersToCache();
             CharactersView?.Refresh();
+            SelectedCharacter = character;
+            SaveState();
+        }
+
+        // =========================================================
+        // Add Character Icon
+        // =========================================================
+        public void AddCharacterIcon(Character character)
+        {
+            if (character == null || character.IsAddPlaceholder || SelectedGame == null) return;
+
+            var dialog = new OpenFileDialog
+            {
+                Title = $"为“{character.Name}”选择头像",
+                Filter = "图片文件|*.png;*.jpg;*.jpeg;*.bmp;*.gif|所有文件|*.*",
+                Multiselect = false
+            };
+            if (dialog.ShowDialog(Application.Current?.MainWindow) != true) return;
+
+            try
+            {
+                Directory.CreateDirectory(SelectedGame.Path);
+                var extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
+                var destination = Path.Combine(SelectedGame.Path, character.Name + extension);
+                if (!string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Copy(dialog.FileName, destination, overwrite: true);
+                }
+
+                foreach (var oldIcon in Directory.EnumerateFiles(SelectedGame.Path)
+                    .Where(path => !string.Equals(path, destination, StringComparison.OrdinalIgnoreCase)
+                        && CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
+                        && string.Equals(Path.GetFileNameWithoutExtension(path), character.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    File.Delete(oldIcon);
+                }
+
+                character.IconPath = destination;
+                SaveState();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"添加头像失败：{ex.Message}", "角色头像", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         // =========================================================
@@ -260,6 +485,8 @@ namespace ModManager.ViewModels
         private bool CharacterFilter(object o)
         {
             if (o is not Models.Character character) return true;
+            // 占位项始终放行，保证“新增角色”按钮不被“仅显示有 Mod”过滤掉
+            if (character.IsAddPlaceholder) return true;
             if (!ShowOnlyWithMods) return true;
             var path = SelectedGame?.ModsRootPath;
             if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return true;
@@ -385,27 +612,33 @@ namespace ModManager.ViewModels
                             _sourcesByModPath[savedMod.FilePath] = savedMod.Source;
                         }
                         Games.Clear();
-                        foreach (var savedGame in doc.Games) Games.Add(savedGame);
-                        Characters.Clear();
-                        foreach (var savedCharacter in doc.Characters) Characters.Add(savedCharacter);
+                        foreach (var savedGame in doc.Games ?? Array.Empty<Game>()) Games.Add(savedGame);
+
+                        _charactersByGame.Clear();
+                        var legacyGameId = Games.FirstOrDefault()?.Id ?? Games.FirstOrDefault()?.Name ?? string.Empty;
+                        foreach (var savedCharacter in doc.Characters ?? Array.Empty<Character>())
+                        {
+                            savedCharacter.Id ??= Guid.NewGuid().ToString();
+                            savedCharacter.Mods ??= new ObservableCollection<Mod>();
+                            var gameId = string.IsNullOrWhiteSpace(savedCharacter.GameId) ? legacyGameId : savedCharacter.GameId;
+                            savedCharacter.GameId = gameId;
+                            if (!_charactersByGame.TryGetValue(gameId, out var characters))
+                            {
+                                characters = new List<Character>();
+                                _charactersByGame[gameId] = characters;
+                            }
+                            characters.Add(savedCharacter);
+                        }
+
                         SelectedGame = Games.FirstOrDefault();
-                        SelectedCharacter = Characters.FirstOrDefault();
-                        SelectedMod = SelectedCharacter?.Mods.FirstOrDefault(m => m.Enabled) ?? SelectedCharacter?.Mods.FirstOrDefault();
                         return;
                     }
                 }
                 catch { }
             }
 
-            var sampleGame = new Game { Id = "g1", Name = "示例游戏", Path = "C:\\Games\\Example" };
-            Games.Add(sampleGame);
-            var sampleCharacter = new Character { Id = "c1", Name = "示例角色" };
-            sampleCharacter.Mods.Add(new Mod { Id = "m1", Name = "Mod A", Enabled = true });
-            sampleCharacter.Mods.Add(new Mod { Id = "m2", Name = "Mod B", Enabled = false });
-            Characters.Add(sampleCharacter);
-            SelectedGame = sampleGame;
-            SelectedCharacter = sampleCharacter;
-            SelectedMod = sampleCharacter.Mods.FirstOrDefault();
+            // 首次运行直接使用内置游戏和角色信息文件，不再创建依赖头像的示例角色。
+            SelectedGame = Games.FirstOrDefault();
             SaveState();
         }
 
@@ -895,7 +1128,15 @@ namespace ModManager.ViewModels
             try
             {
                 Directory.CreateDirectory(StateDirectory);
-                var snapshot = new StateSnapshot { Games = Games.ToArray(), Characters = Characters.ToArray() };
+                SaveCurrentCharactersToCache();
+                // 序列化时排除占位项，避免把“新增角色”按钮持久化到状态文件
+                var allCharacters = _charactersByGame.Values
+                    .SelectMany(characters => characters)
+                    .Where(character => !character.IsAddPlaceholder)
+                    .GroupBy(character => $"{character.GameId}\u0000{character.Id}", StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToArray();
+                var snapshot = new StateSnapshot { Games = Games.ToArray(), Characters = allCharacters };
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 File.WriteAllText(StateFile, JsonSerializer.Serialize(snapshot, options));
             }

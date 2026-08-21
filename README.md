@@ -5,7 +5,8 @@ ModManager 是一个面向 GIMI（XXMI Launcher）的 Mod 管理器 WPF 桌面�
 
 ## 功能特性
 
-- **按游戏与角色组织**：内置 GI（原神）与 WW（鸣潮）两个游戏预设，角色列表基于游戏头像资源自动生成
+- **按游戏与角色组织**：内置 GI（原神）与 WW（鸣潮）两个游戏预设，角色列表基于独立角色信息文件加载，头像只作为可选显示资源
+- **角色头像管理**：无头像角色仍可正常使用；右键角色头像区域即可选择图片，图片会复制到对应游戏的 `CharacterPic` 文件夹并按角色名命名
 - **Mods 根目录管理**：为每个游戏独立设置 Mods 根目录，设置后持久化保存，重启应用无需重新配置
 - **启禁用 Mod**：通过 `DISABLED_` 前缀重命名实现启停；切换时自动读取并保存当前 GIMI Persist 值，启用时自动恢复
 - **一键激活**：同时关闭同角色其他已启用 Mod，并恢复目标 Mod 的 Persist 状态
@@ -23,7 +24,8 @@ ModManager/
 ├── Models/                  # 数据模型
 │   ├── Game.cs              # 游戏（Id、Name、Path、ModsRootPath）
 │   ├── Mod.cs               # Mod（名称、路径、预览图列表、来源、启停状态）
-│   ├── Character.cs         # 角色（头像路径、Mod 列表）
+│   ├── Character.cs         # 角色（所属游戏、可选头像路径、Mod 列表）
+│   ├── CharacterInfo.cs     # 角色信息文件中的角色定义
 │   └── IniShortcut.cs       # INI 快捷键项
 ├── ViewModels/              # 视图模型
 │   ├── MainViewModel.cs     # 主逻辑（扫描、启停、导入、预览、Persist 联动、状态持久化）
@@ -38,7 +40,7 @@ ModManager/
 ├── Converters/              # 值转换器
 │   ├── ImagePathToImageSourceConverter.cs
 │   └── IntGreaterThanZeroToVisibilityConverter.cs
-├── Resources/               # 图标（Icons）、角色头像（CharacterPic）
+├── Resources/               # 图标、角色头像（CharacterPic）、角色信息（CharacterInfo）
 ├── App.xaml / MainWindow.xaml
 └── ModManager.csproj
 ```
@@ -71,6 +73,7 @@ ModManager/
 | 文件 | 说明 |
 |------|------|
 | `modstate.json` | 游戏列表、Mods 根目录、角色与 Mod 的启用状态、来源等 |
+| `Resources/CharacterInfo/GI.json`、`WW.json` | 各游戏角色信息；角色列表以此为准，头像可以缺失 |
 | `gimi-persist.json` | 各 Mod 的 GIMI Persist 保存值（用于启停时恢复） |
 
 > 注：`GimiPersistService` 通过读取/写入 `d3dx_user.ini`（路径在 `MainViewModel` 构造函数中配置）来保存与恢复 Persist 状态。
