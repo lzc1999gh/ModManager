@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿# ModManager
 
 ModManager 是一个面向 GIMI（XXMI Launcher）的 Mod 管理器 WPF 桌面应用，用于按角色组织、启用/禁用、导入、预览游戏 Mod，并在 Mod 启停时自动保存与恢复 GIMI Persist 快捷键状态。
@@ -73,3 +74,6 @@ ModManager/
 | `gimi-persist.json` | 各 Mod 的 GIMI Persist 保存值（用于启停时恢复） |
 
 > 注：`GimiPersistService` 通过读取/写入 `d3dx_user.ini`（路径在 `MainViewModel` 构造函数中配置）来保存与恢复 Persist 状态。
+=======
+这是一个99.9%由AI完成的YS和WW的MOD管理器，完全在chatgpt（白嫖）、deepseek两位老师的指导下实现
+>>>>>>> 24766fb4ad327c3605cb3b25dfc4d3aa567d91fe
