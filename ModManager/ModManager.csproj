@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="SharpVectors" Version="1.8.5" />
-    <PackageReference Include="Xceed.Wpf.Toolkit" Version="4.8.0" />
     <PackageReference Include="Ookii.Dialogs.Wpf" Version="3.4.0" />
   </ItemGroup>
 
@@ -24,23 +23,6 @@
 
   <ItemGroup>
     <Content Include="Resources\CharacterPic\**\*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Resources\CharacterPic\WW\" />
-    <Folder Include="Resources\CharacterPic\GI\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="Resources\Icons\next.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Resources\Icons\open.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="Resources\Icons\prev.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -1,5 +1,3 @@
-using System;
-
 namespace ModManager.Models
 {
     public class IniShortcut

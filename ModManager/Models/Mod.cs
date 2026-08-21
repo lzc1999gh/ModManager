@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -54,7 +53,6 @@ namespace ModManager.Models
                 _previewPaths.CollectionChanged += PreviewPaths_CollectionChanged;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CurrentPreviewPath));
-                OnPropertyChanged(nameof(PreviewPath));
             }
         }
 
@@ -114,7 +112,6 @@ namespace ModManager.Models
         private void PreviewPaths_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             OnPropertyChanged(nameof(CurrentPreviewPath));
-            OnPropertyChanged(nameof(PreviewPath));
         }
 
         private int _currentPreviewIndex;
@@ -132,7 +129,6 @@ namespace ModManager.Models
                 _currentPreviewIndex = newVal;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(CurrentPreviewPath));
-                OnPropertyChanged(nameof(PreviewPath));
             }
         }
 
@@ -143,20 +139,6 @@ namespace ModManager.Models
                 ? PreviewPaths[CurrentPreviewIndex]
                 : null;
 
-        // 兼容属性：旧代码/旧序列化数据可能直接赋值 PreviewPath，通过 setter 加入列表
-        [JsonIgnore]
-        public string? PreviewPath
-        {
-            get => CurrentPreviewPath;
-            set
-            {
-                if (string.IsNullOrEmpty(value)) return;
-                if (PreviewPaths == null) PreviewPaths = new ObservableCollection<string>();
-                if (!PreviewPaths.Contains(value))
-                    PreviewPaths.Add(value);
-                CurrentPreviewIndex = PreviewPaths.IndexOf(value);
-            }
-        }
         public ObservableCollection<IniShortcut> IniShortcuts { get; set; } = new ObservableCollection<IniShortcut>();
         // 可选：文件大小（字节）
         public long Size { get; set; }

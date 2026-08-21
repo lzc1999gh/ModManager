@@ -1,10 +1,4 @@
-using System.Windows.Controls;
-using System.Windows;
-using System;
-using System.Linq;
-
 using ModManager.ViewModels;
-using ModManager.Models;
 
 namespace ModManager.Views
 {

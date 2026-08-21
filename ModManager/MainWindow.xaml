@@ -1,10 +1,8 @@
-﻿<Window x:Class="ModManager.MainWindow"
+<Window x:Class="ModManager.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
-        xmlns:local="clr-namespace:ModManager"
         xmlns:views="clr-namespace:ModManager.Views"
         mc:Ignorable="d"
         Title="ModManager" Height="600" Width="1000"
@@ -42,7 +40,7 @@
 
             <views:CharacterView Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"/>
             <views:ModListView Grid.Row="0" Grid.Column="1" Grid.RowSpan="2"/>
-            <views:ModDetailView Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" Loaded="ModDetailView_Loaded" />
+            <views:ModDetailView Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" />
             <views:ModPreviewView Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"/>
         </Grid>
     </Grid>
