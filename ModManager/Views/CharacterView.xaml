@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="ModManager.Views.CharacterView"
+<UserControl x:Class="ModManager.Views.CharacterView"
     x:Name="CharacterViewRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -87,7 +87,7 @@
             </ToggleButton>
         </Grid>
 
-        <ListBox Grid.Row="1" ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0">
+        <ListBox Grid.Row="1" ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" MinWidth="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0" Padding="0" Margin="0">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <!-- 使用横向 WrapPanel 并设置 ItemWidth，这样会自动换行形成多列并支持纵向滚动 -->
@@ -96,7 +96,7 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel Width="70" Margin="2" HorizontalAlignment="Center">
+                    <StackPanel Width="70" Margin="0" HorizontalAlignment="Center">
                         <!-- 普通角色项：头像 + 名字（占位项时隐藏） -->
                         <StackPanel>
                             <StackPanel.Style>
@@ -157,14 +157,10 @@
                                 </TextBlock.Style>
                             </TextBlock>
                         </StackPanel>
-
-                        <!-- 新增角色占位按钮（仅占位项显示） -->
-                        <Button Width="50" Height="50"
-                                Command="{Binding DataContext.AddCharacterCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                ToolTip="新增角色"
-                                HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource ImageButtonStyle}">
+                        <StackPanel>
+                            <!-- 新增角色占位按钮（仅占位项显示） -->
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
@@ -172,9 +168,36 @@
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Button.Style>
-                            <svg:SvgViewbox Width="22" Height="22" Source="pack://siteoforigin:,,,/Resources/Icons/add.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Button>
+                            </StackPanel.Style>
+                            <Button Width="50" Height="50"
+                                    Command="{Binding DataContext.AddCharacterCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    ToolTip="新增角色"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ImageButtonStyle}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                                <svg:SvgViewbox Width="22" Height="22" Source="pack://siteoforigin:,,,/Resources/Icons/add.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Button>
+                            <TextBlock Text="&#x65B0;&#x589E;&#x89D2;&#x8272;" FontSize="11" Foreground="Black" TextAlignment="Center" TextWrapping="Wrap" Width="70">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
@@ -210,3 +233,4 @@
         </ListBox>
     </Grid>
 </UserControl>
+

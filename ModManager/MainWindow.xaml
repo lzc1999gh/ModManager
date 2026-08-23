@@ -38,7 +38,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <views:CharacterView Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"/>
+            <views:CharacterView Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" MinWidth="0" HorizontalAlignment="Stretch" />
             <views:ModListView Grid.Row="0" Grid.Column="1" Grid.RowSpan="2"/>
             <views:ModDetailView Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" />
             <views:ModPreviewView Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"/>
