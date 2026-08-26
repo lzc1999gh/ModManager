@@ -22,7 +22,8 @@ namespace ModManager.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private static readonly string StateDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
-        private static readonly string StateFile = Path.Combine(StateDirectory, "modstate.json");
+        private static readonly string StateFile = Path.Combine(StateDirectory, "mod_manager_state.json");
+        private static readonly string LegacyStateFile = Path.Combine(StateDirectory, "modstate.json");
         private static readonly string UserCharacterInfoDirectory = Path.Combine(StateDirectory, "CharacterInfo");
         private readonly GimiPersistService _gimiPersistService;
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
@@ -241,6 +242,7 @@ namespace ModManager.ViewModels
                 CharacterInfoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", "WW.json")
             });
 
+            MigrateLegacyStateFile();
             LoadStateOrSample();
             EnsureAddGamePlaceholder();
 
@@ -997,6 +999,19 @@ namespace ModManager.ViewModels
         // =========================================================
         // Load State
         // =========================================================
+        private static void MigrateLegacyStateFile()
+        {
+            try
+            {
+                if (!File.Exists(StateFile) && File.Exists(LegacyStateFile))
+                    File.Move(LegacyStateFile, StateFile);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[State] Failed to migrate legacy state file: {ex}");
+            }
+        }
+
         private void LoadStateOrSample()
         {
             if (File.Exists(StateFile))

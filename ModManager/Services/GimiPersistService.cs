@@ -14,7 +14,7 @@ namespace ModManager.Services
     ///
     /// d3dx_user.ini 只保存当前生效 Mod 的运行时值；
     /// 本服务在切换前读取当前值，并把每个 Mod 的历史快照保存到
-    /// %LocalAppData%\ModManager\gimi-persist.json。
+    /// %LocalAppData%\ModManager\mod_persist_snapshots.json。
     ///
     /// 快捷键 [Key...] key= 不属于本服务的处理范围。
     /// </summary>
@@ -23,7 +23,8 @@ namespace ModManager.Services
         private static readonly string StateDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
 
-        private static readonly string PersistStateFile = Path.Combine(StateDirectory, "gimi-persist.json");
+        private static readonly string PersistStateFile = Path.Combine(StateDirectory, "mod_persist_snapshots.json");
+        private static readonly string LegacyPersistStateFile = Path.Combine(StateDirectory, "gimi-persist.json");
         private const string LegacyGameKey = "__legacy__";
 
         // 游戏 ID -> 规范化 Mod 路径 -> ini相对路径\变量名 -> 值
@@ -43,6 +44,7 @@ namespace ModManager.Services
 
         public GimiPersistService()
         {
+            MigrateLegacyPersistStateFile();
             LoadPersistStates();
         }
 
@@ -573,6 +575,19 @@ namespace ModManager.Services
         // =========================================================
         // State file
         // =========================================================
+
+        private static void MigrateLegacyPersistStateFile()
+        {
+            try
+            {
+                if (!File.Exists(PersistStateFile) && File.Exists(LegacyPersistStateFile))
+                    File.Move(LegacyPersistStateFile, PersistStateFile);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[GIMI Persist] Failed to migrate legacy state file: {ex}");
+            }
+        }
 
         private void LoadPersistStates()
         {
