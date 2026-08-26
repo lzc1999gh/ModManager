@@ -30,14 +30,73 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="IniFileButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F3F6FA" />
+            <Setter Property="BorderBrush" Value="#B8C6D4" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="IniOpenButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="56" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="10,2" />
+            <Setter Property="Background" Value="#F3F6FA" />
+            <Setter Property="BorderBrush" Value="#A8B7C6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="13">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     <Grid Margin="4" >
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,8">
+        <TextBlock Grid.Row="0" Text="详情" FontWeight="Bold" Margin="4,0,4,6" />
+
+        <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -47,18 +106,29 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Mod 详情" FontWeight="Bold" Margin="1,0,0,0"/>
-                <Button Grid.Row="0" Grid.Column="2" Command="{Binding DeleteModCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="删除当前 Mod" FontSize="15" Foreground="#C62828" Background="Transparent" >
-                    <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/del.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Button>
-                <Button Grid.Row="1" Grid.Column="2" Command="{Binding OpenModFolderCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="打开Mod文件夹" FontSize="15" Foreground="#C62828" Background="Transparent">
-                    <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/open.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Button>
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="名称：" Margin="1,2,5,2" VerticalAlignment="Center" />
-                <Grid Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">
+                <Grid Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" Margin="8,2,0,2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border BorderBrush="Black" BorderThickness="1" Margin="0,5,0,5" />
+                    <Grid Grid.Column="1" Margin="4,0,-4,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Button Grid.Row="0" Command="{Binding DeleteModCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="删除当前 Mod" FontSize="15" Foreground="#C62828" Background="Transparent" >
+                            <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/del.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Grid.Row="1" Command="{Binding OpenModFolderCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="打开Mod文件夹" FontSize="15" Foreground="#C62828" Background="Transparent">
+                            <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/open.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
+                </Grid>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="名称：" Margin="1,2,5,2" VerticalAlignment="Center" />
+                <Grid Grid.Row="0" Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock x:Name="ModNameText"
                                Text="{Binding SelectedMod.Name}"
                                ToolTip="双击修改名称"
@@ -91,8 +161,8 @@
                     </TextBox>
                 </Grid>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="来源：" Margin="1,2,5,2" VerticalAlignment="Center" />
-                <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="来源：" Margin="1,2,5,2" VerticalAlignment="Center" />
+                <TextBox Grid.Row="1" Grid.Column="1"
                          ToolTip="可填写 Mod 下载链接、作者或来源平台"
                          TextChanged="SourceTextBox_TextChanged"
                          Text="{Binding SelectedMod.Source, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
@@ -111,10 +181,9 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8">
+        <Border Grid.Row="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -148,54 +217,70 @@
                                 </Style>
                             </ToggleButton.Style>
                         </ToggleButton>
-                        <Button Content="读取" Command="{Binding ReadIniCommand}" Margin="8,0,0,0" />
-                        <Button Content="打开" Command="{Binding OpenIniCommand}" Margin="4,0,0,0" />
+                        <Button Content="打开" Command="{Binding OpenIniCommand}"
+                                Style="{StaticResource IniOpenButtonStyle}" Margin="6,0,0,0" />
                     </StackPanel>
                 </DockPanel>
 
-                <TextBlock Grid.Row="1" Text="{Binding SelectedMod.IniFilePath}" FontSize="11" Foreground="Gray"
-                           TextTrimming="CharacterEllipsis" Margin="0,6,0,0" />
-
-                <ListBox Grid.Row="2" Grid.RowSpan="2" ItemsSource="{Binding SelectedMod.IniShortcuts}" Margin="0,6,0,0">
-                    <ListBox.Style>
-                        <Style TargetType="ListBox">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ShowIniContent}" Value="True">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.Style>
-                    <ListBox.ItemTemplate>
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding SelectedMod.ToggleIniFiles}" Margin="0,6,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Key}" />
+                            <Button Content="{Binding FileName}"
+                                    Command="{Binding DataContext.SelectIniFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource IniFileButtonStyle}"
+                                    Margin="0,0,6,0" />
                         </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <TextBox Grid.Row="2" Grid.RowSpan="2" Margin="0,6,0,0" Text="{Binding SelectedMod.IniContent}"
+                <Grid Grid.Row="2" Margin="0,6,0,0">
+                    <ListBox ItemsSource="{Binding SelectedMod.SelectedIniFile.Shortcuts}">
+                        <ListBox.Style>
+                            <Style TargetType="ListBox">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowIniContent}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListBox.Style>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Key}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <TextBox Text="{Binding SelectedMod.IniContent}"
                          IsReadOnly="True" TextWrapping="NoWrap" AcceptsReturn="True"
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas" FontSize="11" >
-                    <TextBox.Style>
-                        <Style TargetType="TextBox">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding ShowIniContent}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                    <TextBox.Resources>
-                        <Style TargetType="{x:Type Border}">
-                            <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="BorderBrush" Value="#c1d0dc"/>
-                            <Setter Property="BorderThickness" Value="0.5" />
-                            <Setter Property="Background" Value="Transparent" />
-                        </Style>
-                    </TextBox.Resources>
-                </TextBox>
+                         FontFamily="Cascadia Mono, Consolas" FontSize="11" >
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ShowIniContent}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                        <TextBox.Resources>
+                            <Style TargetType="{x:Type Border}">
+                                <Setter Property="CornerRadius" Value="4"/>
+                                <Setter Property="BorderBrush" Value="#c1d0dc"/>
+                                <Setter Property="BorderThickness" Value="0.5" />
+                                <Setter Property="Background" Value="Transparent" />
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Grid>
             </Grid>
         </Border>
     </Grid>

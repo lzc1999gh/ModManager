@@ -96,6 +96,37 @@ namespace ModManager.Models
             }
         }
 
+        [JsonIgnore]
+        public ObservableCollection<IniFileInfo> IniFiles { get; } = new ObservableCollection<IniFileInfo>();
+
+        [JsonIgnore]
+        public ObservableCollection<IniFileInfo> ToggleIniFiles { get; } = new ObservableCollection<IniFileInfo>();
+
+        private IniFileInfo _selectedIniFile;
+        [JsonIgnore]
+        public IniFileInfo SelectedIniFile
+        {
+            get => _selectedIniFile;
+            set
+            {
+                if (_selectedIniFile == value) return;
+                if (_selectedIniFile != null) _selectedIniFile.IsSelected = false;
+                _selectedIniFile = value;
+                if (_selectedIniFile != null)
+                {
+                    _selectedIniFile.IsSelected = true;
+                    IniFilePath = _selectedIniFile.FilePath;
+                    IniContent = _selectedIniFile.Content;
+                }
+                else
+                {
+                    IniFilePath = null;
+                    IniContent = null;
+                }
+                OnPropertyChanged();
+            }
+        }
+
         private string? _iniContent;
         [JsonIgnore]
         public string? IniContent
@@ -139,7 +170,6 @@ namespace ModManager.Models
                 ? PreviewPaths[CurrentPreviewIndex]
                 : null;
 
-        public ObservableCollection<IniShortcut> IniShortcuts { get; set; } = new ObservableCollection<IniShortcut>();
         // 可选：文件大小（字节）
         public long Size { get; set; }
         public bool Enabled

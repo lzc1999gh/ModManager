@@ -23,11 +23,15 @@ namespace ModManager.ViewModels
     {
         private static readonly string StateDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
         private static readonly string StateFile = Path.Combine(StateDirectory, "modstate.json");
+        private static readonly string UserCharacterInfoDirectory = Path.Combine(StateDirectory, "CharacterInfo");
         private readonly GimiPersistService _gimiPersistService;
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<Character>> _charactersByGame = new(StringComparer.OrdinalIgnoreCase);
         // 列表末尾的“新增角色”占位项，始终保持在角色列表最后一位
         private readonly Character _addPlaceholder;
+        // 游戏下拉菜单末尾的“增加游戏”占位项，不参与状态保存。
+        private readonly Game _addGamePlaceholder;
+        private bool _ignoreAddGamePlaceholderSelection;
 
         // =========================================================
         // Collections
@@ -57,12 +61,24 @@ namespace ModManager.ViewModels
             get => _selectedGame;
             set
             {
+                if (value?.IsAddGamePlaceholder == true)
+                {
+                    if (_ignoreAddGamePlaceholderSelection)
+                    {
+                        OnPropertyChanged(nameof(SelectedGame));
+                        return;
+                    }
+                    OnPropertyChanged(nameof(SelectedGame));
+                    Application.Current?.Dispatcher.BeginInvoke(
+                        new Action(AddGame),
+                        System.Windows.Threading.DispatcherPriority.Background);
+                    return;
+                }
                 if (_selectedGame == value) return;
                 SaveCurrentCharactersToCache();
                 _selectedGame = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ModsRootPath));
-                OnPropertyChanged(nameof(ModsRootPathIsUserSet));
                 LoadCharactersForGame(_selectedGame);
                 var gamePath = _selectedGame?.ModsRootPath;
                 if (!string.IsNullOrEmpty(gamePath) && Directory.Exists(gamePath))
@@ -99,7 +115,7 @@ namespace ModManager.ViewModels
             {
                 _selectedMod = value;
                 OnPropertyChanged();
-                ReadIniFile(showMissingMessage: false);
+                LoadIniData();
             }
         }
 
@@ -114,11 +130,14 @@ namespace ModManager.ViewModels
         public ICommand PrevPreviewCommand { get; }
         public ICommand NextPreviewCommand { get; }
         public ICommand DeleteModCommand { get; }
-        public ICommand ReadIniCommand { get; }
         public ICommand OpenIniCommand { get; }
+        public ICommand SelectIniFileCommand { get; }
         public ICommand OpenModFolderCommand { get; }
         public ICommand AddCharacterCommand { get; }
         public ICommand AddCharacterIconCommand { get; }
+        public ICommand RenameCharacterCommand { get; }
+        public ICommand EditGameCommand { get; }
+        public ICommand DeleteGameCommand { get; }
 
         // =========================================================
         // UI State
@@ -152,12 +171,6 @@ namespace ModManager.ViewModels
 
         public ICollectionView CharactersView { get; private set; }
 
-        public bool ModsRootPathIsUserSet
-        {
-            get => SelectedGame != null && !string.IsNullOrEmpty(SelectedGame.ModsRootPath);
-            set => OnPropertyChanged();
-        }
-
         // =========================================================
         // Constructor
         // =========================================================
@@ -165,6 +178,12 @@ namespace ModManager.ViewModels
         {
             _gimiPersistService = new GimiPersistService(@"H:\XXMI Launcher\GIMI\d3dx_user.ini");
             _addPlaceholder = new Character { Id = Guid.NewGuid().ToString(), Name = "", IsAddPlaceholder = true };
+            _addGamePlaceholder = new Game
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = "增加游戏",
+                IsAddGamePlaceholder = true
+            };
 
             ToggleModCommand = new RelayCommand(p =>
             {
@@ -182,28 +201,71 @@ namespace ModManager.ViewModels
             NextPreviewCommand = new RelayCommand(p => NextPreview());
 
             DeleteModCommand = new RelayCommand(p => DeleteMod(), p => SelectedMod != null);
-            ReadIniCommand = new RelayCommand(p => ReadIniFile(showMissingMessage: true), p => SelectedMod != null);
             OpenIniCommand = new RelayCommand(p => OpenIniFile(), p => SelectedMod != null);
+            SelectIniFileCommand = new RelayCommand(p =>
+            {
+                if (p is IniFileInfo ini) SelectIniFile(ini);
+            }, p => p is IniFileInfo);
             OpenModFolderCommand = new RelayCommand(OpenModFolder, p => SelectedMod != null);
             AddCharacterCommand = new RelayCommand(p => AddCharacter());
             AddCharacterIconCommand = new RelayCommand(p =>
             {
-                if (p is Character character) AddCharacterIcon(character);
+                if (p is Character character) ChangeCharacterIcon(character);
             }, p => p is Character character && !character.IsAddPlaceholder);
+            RenameCharacterCommand = new RelayCommand(p =>
+            {
+                if (p is Character character) RenameCharacter(character);
+            }, p => p is Character character && !character.IsAddPlaceholder);
+            EditGameCommand = new RelayCommand(p =>
+            {
+                if (p is Game game) EditGame(game);
+            }, p => p is Game game && !game.IsAddGamePlaceholder);
+            DeleteGameCommand = new RelayCommand(p =>
+            {
+                if (p is Game game) DeleteGame(game);
+            }, p => p is Game game && !game.IsAddGamePlaceholder);
 
             var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
-            Games.Add(new Game { Id = "GI", Name = "GI", Path = Path.Combine(resourceRoot, "GI") });
-            Games.Add(new Game { Id = "WW", Name = "WW", Path = Path.Combine(resourceRoot, "WW") });
+            Games.Add(new Game
+            {
+                Id = "GI",
+                Name = "GI",
+                Path = Path.Combine(resourceRoot, "GI"),
+                CharacterInfoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", "GI.json")
+            });
+            Games.Add(new Game
+            {
+                Id = "WW",
+                Name = "WW",
+                Path = Path.Combine(resourceRoot, "WW"),
+                CharacterInfoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", "WW.json")
+            });
 
             LoadStateOrSample();
+            EnsureAddGamePlaceholder();
 
             CharactersView = CollectionViewSource.GetDefaultView(Characters);
             CharactersView.Filter = CharacterFilter;
+
+            // The initial game is selected before the view is created; reload once so
+            // the character and Mod panels receive their initial view data.
+            if (SelectedGame != null)
+            {
+                LoadCharactersForGame(SelectedGame);
+                var initialModsRoot = SelectedGame.ModsRootPath;
+                if (!string.IsNullOrEmpty(initialModsRoot) && Directory.Exists(initialModsRoot))
+                    LoadFromModsRoot(initialModsRoot);
+            }
         }
 
         // =========================================================
         // Mod Folder
         // =========================================================
+        private void EnsureAddGamePlaceholder()
+        {
+            if (!Games.Contains(_addGamePlaceholder)) Games.Add(_addGamePlaceholder);
+        }
+
         private void OpenModFolder(object parameter)
         {
             if (SelectedMod == null) return;
@@ -233,12 +295,42 @@ namespace ModManager.ViewModels
 
         private string GetCharacterInfoPath(Game game)
         {
-            var directory = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo");
+            if (!string.IsNullOrWhiteSpace(game?.CharacterInfoPath)) return game.CharacterInfoPath;
+
             var gameId = game?.Id;
             if (string.IsNullOrWhiteSpace(gameId)) gameId = game?.Name;
             if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
             foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
-            return Path.Combine(directory, gameId + ".json");
+
+            var packagedPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", gameId + ".json");
+            if (File.Exists(packagedPath))
+            {
+                game.CharacterInfoPath = packagedPath;
+                return packagedPath;
+            }
+
+            Directory.CreateDirectory(UserCharacterInfoDirectory);
+            game.CharacterInfoPath = Path.Combine(UserCharacterInfoDirectory, gameId + ".json");
+            return game.CharacterInfoPath;
+        }
+
+        private string GetCharacterInfoWritePath(Game game)
+        {
+            var infoPath = GetCharacterInfoPath(game);
+            var packagedDirectory = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo");
+            var fullInfoPath = Path.GetFullPath(infoPath);
+            var fullPackagedDirectory = Path.GetFullPath(packagedDirectory) + Path.DirectorySeparatorChar;
+            if (!fullInfoPath.StartsWith(fullPackagedDirectory, StringComparison.OrdinalIgnoreCase)) return infoPath;
+
+            var gameId = game?.Id;
+            if (string.IsNullOrWhiteSpace(gameId)) gameId = game?.Name;
+            if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
+            foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
+            Directory.CreateDirectory(UserCharacterInfoDirectory);
+            var userPath = Path.Combine(UserCharacterInfoDirectory, gameId + ".json");
+            if (!File.Exists(userPath) && File.Exists(infoPath)) File.Copy(infoPath, userPath);
+            game.CharacterInfoPath = userPath;
+            return userPath;
         }
 
         private List<CharacterInfo> ReadCharacterInfoFile(Game game)
@@ -281,7 +373,7 @@ namespace ModManager.ViewModels
         {
             try
             {
-                var infoPath = GetCharacterInfoPath(game);
+                var infoPath = GetCharacterInfoWritePath(game);
                 Directory.CreateDirectory(Path.GetDirectoryName(infoPath));
                 var normalized = infos
                     .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
@@ -318,6 +410,19 @@ namespace ModManager.ViewModels
             return Directory.EnumerateFiles(game.Path)
                 .FirstOrDefault(path => CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
                     && string.Equals(Path.GetFileNameWithoutExtension(path), characterName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private string GetCharacterIconDirectory(Game game)
+        {
+            if (game == null) return null;
+            if (string.IsNullOrWhiteSpace(game.Path))
+            {
+                var gameId = string.IsNullOrWhiteSpace(game.Id) ? game.Name : game.Id;
+                if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
+                foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
+                game.Path = Path.Combine(StateDirectory, "CharacterPic", gameId);
+            }
+            return game.Path;
         }
 
         private List<Character> GetCachedCharacters(string gameId)
@@ -438,9 +543,303 @@ namespace ModManager.ViewModels
         }
 
         // =========================================================
-        // Add Character Icon
+        // Add Game
         // =========================================================
-        public void AddCharacterIcon(Character character)
+        public void AddGame()
+        {
+            var dialog = new GameDialog
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var id = dialog.GameId.Trim();
+            var name = dialog.GameName.Trim();
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name)
+                || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                MessageBox.Show("游戏 ID 和名称不能为空，游戏 ID 不能包含文件名非法字符。", "增加游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (Games.Any(game => string.Equals(game.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("该游戏 ID 已存在。", "增加游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var game = new Game
+            {
+                Id = id,
+                Name = name,
+                Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
+                    ? Path.Combine(StateDirectory, "CharacterPic", id)
+                    : dialog.CharacterPicPath.Trim(),
+                ModsRootPath = dialog.ModsRootPath.Trim()
+            };
+            var addGameIndex = Games.IndexOf(_addGamePlaceholder);
+            if (addGameIndex >= 0)
+                Games.Insert(addGameIndex, game);
+            else
+                Games.Add(game);
+            SelectedGame = game;
+            SaveState();
+            if (!string.IsNullOrWhiteSpace(game.ModsRootPath) && Directory.Exists(game.ModsRootPath))
+                LoadFromModsRoot(game.ModsRootPath);
+        }
+
+        // =========================================================
+        // Edit Game
+        // =========================================================
+        public void EditGame(Game game)
+        {
+            if (game == null || game.IsAddGamePlaceholder) return;
+
+            var dialog = new GameDialog(game)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var id = dialog.GameId.Trim();
+            var name = dialog.GameName.Trim();
+            if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(name)
+                || id.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                MessageBox.Show("游戏 ID 和名称不能为空，游戏 ID 不能包含文件名非法字符。", "修改游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (Games.Any(item => !item.IsAddGamePlaceholder && item != game
+                && string.Equals(item.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("该游戏 ID 已存在。", "修改游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var oldKey = game.Id ?? game.Name ?? string.Empty;
+            var newKey = id;
+            var isSelected = ReferenceEquals(game, SelectedGame);
+            if (isSelected) SaveCurrentCharactersToCache();
+
+            _charactersByGame.TryGetValue(oldKey, out var cachedCharacters);
+            if (!string.Equals(oldKey, newKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _charactersByGame.Remove(oldKey);
+                if (cachedCharacters != null) _charactersByGame[newKey] = cachedCharacters;
+            }
+
+            game.Id = id;
+            game.Name = name;
+            game.ModsRootPath = dialog.ModsRootPath.Trim();
+            game.Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
+                ? Path.Combine(StateDirectory, "CharacterPic", id)
+                : dialog.CharacterPicPath.Trim();
+
+            if (cachedCharacters != null)
+            {
+                foreach (var character in cachedCharacters) character.GameId = id;
+            }
+
+            if (isSelected)
+            {
+                LoadCharactersForGame(game);
+                if (!string.IsNullOrWhiteSpace(game.ModsRootPath) && Directory.Exists(game.ModsRootPath))
+                    LoadFromModsRoot(game.ModsRootPath);
+            }
+            SaveState();
+        }
+
+        // =========================================================
+        // Delete Game
+        // =========================================================
+        public void DeleteGame(Game game)
+        {
+            if (game == null || game.IsAddGamePlaceholder) return;
+
+            if (Games.Count(item => !item.IsAddGamePlaceholder) <= 1)
+            {
+                MessageBox.Show("至少需要保留一个游戏。", "删除游戏", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"确定删除游戏“{game.Name}”的信息吗？\n不会删除磁盘上的 Mods 文件。",
+                "删除游戏",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            var isSelected = ReferenceEquals(game, SelectedGame);
+            if (isSelected) SaveCurrentCharactersToCache();
+            _charactersByGame.Remove(game.Id ?? game.Name ?? string.Empty);
+            DeleteUserCharacterInfoFile(game);
+
+            var nextGame = Games.FirstOrDefault(item =>
+                !item.IsAddGamePlaceholder && !ReferenceEquals(item, game));
+            _ignoreAddGamePlaceholderSelection = true;
+            try
+            {
+                Games.Remove(game);
+                if (isSelected) SelectedGame = nextGame;
+            }
+            finally
+            {
+                _ignoreAddGamePlaceholderSelection = false;
+            }
+
+            SaveState();
+        }
+
+        private static void DeleteUserCharacterInfoFile(Game game)
+        {
+            if (game == null || string.IsNullOrWhiteSpace(game.CharacterInfoPath)) return;
+
+            try
+            {
+                var userDirectory = Path.GetFullPath(UserCharacterInfoDirectory).TrimEnd(Path.DirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+                var infoPath = Path.GetFullPath(game.CharacterInfoPath);
+                if (infoPath.StartsWith(userDirectory, StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(infoPath))
+                {
+                    File.Delete(infoPath);
+                }
+            }
+            catch { }
+        }
+
+        // =========================================================
+        // Rename Character
+        // =========================================================
+        public void RenameCharacter(Character character)
+        {
+            if (character == null || character.IsAddPlaceholder || SelectedGame == null) return;
+
+            var dialog = new InputDialog("修改角色名", "请输入新的角色名：", character.Name)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            var requestedName = dialog.ResultText;
+            if (string.IsNullOrWhiteSpace(requestedName) || requestedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                MessageBox.Show("角色名不能为空，也不能包含文件名非法字符。", "修改角色名", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (string.Equals(character.Name, requestedName, StringComparison.OrdinalIgnoreCase)) return;
+            if (Characters.Any(item => !item.IsAddPlaceholder && item != character
+                && string.Equals(item.Name, requestedName, StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show("该角色名已经存在。", "修改角色名", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var oldName = character.Name;
+            var modsRoot = SelectedGame.ModsRootPath;
+            var oldCharacterDir = string.IsNullOrWhiteSpace(modsRoot) ? null : Path.Combine(modsRoot, oldName);
+            var newCharacterDir = string.IsNullOrWhiteSpace(modsRoot) ? null : Path.Combine(modsRoot, requestedName);
+            var oldIcon = FindCharacterIcon(SelectedGame, oldName);
+            var newIcon = string.IsNullOrWhiteSpace(oldIcon) || string.IsNullOrWhiteSpace(SelectedGame.Path)
+                ? null
+                : Path.Combine(SelectedGame.Path, requestedName + Path.GetExtension(oldIcon));
+
+            if (!string.IsNullOrWhiteSpace(newCharacterDir)
+                && (Directory.Exists(newCharacterDir) || File.Exists(newCharacterDir)))
+            {
+                MessageBox.Show("目标角色的 Mod 文件夹已经存在。", "修改角色名", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (!string.IsNullOrWhiteSpace(newIcon) && File.Exists(newIcon))
+            {
+                MessageBox.Show("目标角色的头像文件已经存在。", "修改角色名", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var movedCharacterDir = false;
+            var movedIcon = false;
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(oldCharacterDir) && Directory.Exists(oldCharacterDir))
+                {
+                    Directory.Move(oldCharacterDir, newCharacterDir);
+                    movedCharacterDir = true;
+                }
+                if (!string.IsNullOrWhiteSpace(oldIcon) && !string.IsNullOrWhiteSpace(newIcon)
+                    && !string.Equals(oldIcon, newIcon, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Move(oldIcon, newIcon);
+                    movedIcon = true;
+                }
+
+                var infos = ReadCharacterInfoFile(SelectedGame);
+                var info = infos.FirstOrDefault(item => string.Equals(item.Id, character.Id, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(item.Name, oldName, StringComparison.OrdinalIgnoreCase));
+                if (info == null)
+                {
+                    info = new CharacterInfo { Id = character.Id, Name = requestedName };
+                    infos.Add(info);
+                }
+                else
+                {
+                    info.Name = requestedName;
+                }
+                if (!SaveCharacterInfoFile(SelectedGame, infos)) throw new IOException("角色信息文件保存失败。");
+
+                if (movedCharacterDir)
+                {
+                    foreach (var mod in character.Mods)
+                    {
+                        var oldModPath = mod.FilePath;
+                        if (!string.IsNullOrWhiteSpace(mod.FilePath)
+                            && mod.FilePath.StartsWith(oldCharacterDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                        {
+                            mod.FilePath = Path.Combine(newCharacterDir, Path.GetRelativePath(oldCharacterDir, mod.FilePath));
+                        }
+                        UpdatePreviewPathsAfterMove(mod, oldCharacterDir, newCharacterDir, movedDirectory: true);
+                        foreach (var ini in mod.IniFiles)
+                        {
+                            if (!string.IsNullOrWhiteSpace(ini.FilePath)
+                                && ini.FilePath.StartsWith(oldCharacterDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                            {
+                                ini.FilePath = Path.Combine(newCharacterDir, Path.GetRelativePath(oldCharacterDir, ini.FilePath));
+                            }
+                        }
+                        if (!string.IsNullOrWhiteSpace(oldModPath) && !string.Equals(oldModPath, mod.FilePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (_sourcesByModPath.TryGetValue(oldModPath, out var source))
+                            {
+                                _sourcesByModPath.Remove(oldModPath);
+                                _sourcesByModPath[mod.FilePath] = source;
+                            }
+                            _gimiPersistService.MovePersistState(oldModPath, mod.FilePath);
+                        }
+                    }
+                }
+
+                character.Name = requestedName;
+                character.IconPath = newIcon;
+                SaveCurrentCharactersToCache();
+                CharactersView?.Refresh();
+                SaveState();
+            }
+            catch (Exception ex)
+            {
+                if (movedIcon && File.Exists(newIcon))
+                {
+                    try { File.Move(newIcon, oldIcon); } catch { }
+                }
+                if (movedCharacterDir && Directory.Exists(newCharacterDir))
+                {
+                    try { Directory.Move(newCharacterDir, oldCharacterDir); } catch { }
+                }
+                MessageBox.Show($"修改角色名失败：{ex.Message}", "修改角色名", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        // =========================================================
+        // Change Character Icon
+        // =========================================================
+        public void ChangeCharacterIcon(Character character)
         {
             if (character == null || character.IsAddPlaceholder || SelectedGame == null) return;
 
@@ -454,15 +853,16 @@ namespace ModManager.ViewModels
 
             try
             {
-                Directory.CreateDirectory(SelectedGame.Path);
+                var iconDirectory = GetCharacterIconDirectory(SelectedGame);
+                Directory.CreateDirectory(iconDirectory);
                 var extension = Path.GetExtension(dialog.FileName).ToLowerInvariant();
-                var destination = Path.Combine(SelectedGame.Path, character.Name + extension);
+                var destination = Path.Combine(iconDirectory, character.Name + extension);
                 if (!string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase))
                 {
                     File.Copy(dialog.FileName, destination, overwrite: true);
                 }
 
-                foreach (var oldIcon in Directory.EnumerateFiles(SelectedGame.Path)
+                foreach (var oldIcon in Directory.EnumerateFiles(iconDirectory)
                     .Where(path => !string.Equals(path, destination, StringComparison.OrdinalIgnoreCase)
                         && CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
                         && string.Equals(Path.GetFileNameWithoutExtension(path), character.Name, StringComparison.OrdinalIgnoreCase)))
@@ -611,8 +1011,12 @@ namespace ModManager.ViewModels
                         {
                             _sourcesByModPath[savedMod.FilePath] = savedMod.Source;
                         }
-                        Games.Clear();
-                        foreach (var savedGame in doc.Games ?? Array.Empty<Game>()) Games.Add(savedGame);
+                        var savedGames = (doc.Games ?? Array.Empty<Game>()).ToArray();
+                        if (savedGames.Length > 0)
+                        {
+                            Games.Clear();
+                            foreach (var savedGame in savedGames) Games.Add(savedGame);
+                        }
 
                         _charactersByGame.Clear();
                         var legacyGameId = Games.FirstOrDefault()?.Id ?? Games.FirstOrDefault()?.Name ?? string.Empty;
@@ -665,7 +1069,7 @@ namespace ModManager.ViewModels
                     var enabled = !modName.StartsWith("DISABLED_", StringComparison.OrdinalIgnoreCase);
                     var displayName = enabled ? modName : modName.Substring("DISABLED_".Length);
                     var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = displayName, FilePath = modDir, Enabled = enabled };
-                    foreach (var previewPath in FindPreviewsInDirectory(modDir)) mod.PreviewPaths.Add(previewPath);
+                    foreach (var previewPath in FindPreviewsForMod(mod)) mod.PreviewPaths.Add(previewPath);
                     ApplySavedSource(mod);
                     character.Mods.Add(mod);
                 }
@@ -677,12 +1081,8 @@ namespace ModManager.ViewModels
                     var info = new FileInfo(modFile);
                     var enabled = !modName.StartsWith("DISABLED_", StringComparison.OrdinalIgnoreCase);
                     var displayName = enabled ? modName : modName.Substring("DISABLED_".Length);
-                    string preview = null;
-                    var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
-                    var extension = Path.GetExtension(modFile).ToLowerInvariant();
-                    if (Array.IndexOf(imageExtensions, extension) >= 0) preview = modFile;
                     var mod = new Mod { Id = Guid.NewGuid().ToString(), Name = displayName, FilePath = modFile, Size = info.Length, Enabled = enabled };
-                    if (!string.IsNullOrEmpty(preview)) mod.PreviewPaths.Add(preview);
+                    foreach (var previewPath in FindPreviewsForMod(mod)) mod.PreviewPaths.Add(previewPath);
                     ApplySavedSource(mod);
                     character.Mods.Add(mod);
                 }
@@ -701,17 +1101,29 @@ namespace ModManager.ViewModels
         {
             var result = new List<string>();
             if (!Directory.Exists(dir)) return result;
-            var extensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
-            var allFiles = Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
-                .Where(filePath => Array.IndexOf(extensions, Path.GetExtension(filePath).ToLowerInvariant()) >= 0)
+            var extensions = new[] { ".png", ".jpg", ".jpeg" };
+            return Directory.EnumerateFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(filePath => extensions.Contains(Path.GetExtension(filePath), StringComparer.OrdinalIgnoreCase))
+                .Where(filePath => Path.GetFileNameWithoutExtension(filePath).StartsWith("preview_", StringComparison.OrdinalIgnoreCase))
                 .OrderBy(filePath => filePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            var previewFiles = allFiles
-                .Where(filePath => Path.GetFileNameWithoutExtension(filePath).StartsWith("preview_", StringComparison.OrdinalIgnoreCase))
+        }
+
+        private List<string> FindPreviewsForMod(Mod mod)
+        {
+            if (mod == null || string.IsNullOrWhiteSpace(mod.FilePath)) return new List<string>();
+            if (Directory.Exists(mod.FilePath)) return FindPreviewsInDirectory(mod.FilePath);
+            if (!File.Exists(mod.FilePath)) return new List<string>();
+
+            var parent = Path.GetDirectoryName(mod.FilePath);
+            if (string.IsNullOrWhiteSpace(parent) || !Directory.Exists(parent)) return new List<string>();
+            var prefix = Path.GetFileNameWithoutExtension(mod.FilePath) + ".preview_";
+            var extensions = new[] { ".png", ".jpg", ".jpeg" };
+            return Directory.EnumerateFiles(parent, "*.*", SearchOption.TopDirectoryOnly)
+                .Where(filePath => extensions.Contains(Path.GetExtension(filePath), StringComparer.OrdinalIgnoreCase))
+                .Where(filePath => Path.GetFileNameWithoutExtension(filePath).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(filePath => filePath, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            if (previewFiles.Count > 0) result.AddRange(previewFiles);
-            else result.AddRange(allFiles);
-            return result;
         }
 
         // =========================================================
@@ -727,20 +1139,26 @@ namespace ModManager.ViewModels
         // =========================================================
         // Next Preview Path
         // =========================================================
-        private string GetNextPreviewPath(string folder)
+        private string GetNextPreviewPath(Mod mod)
         {
+            var folder = GetModFolder(mod);
+            if (string.IsNullOrWhiteSpace(folder)) return null;
+
+            var prefix = Directory.Exists(mod.FilePath)
+                ? "preview_"
+                : Path.GetFileNameWithoutExtension(mod.FilePath) + ".preview_";
             int max = 0;
             if (Directory.Exists(folder))
             {
-                foreach (var filePath in Directory.EnumerateFiles(folder, "preview_*"))
+                foreach (var filePath in Directory.EnumerateFiles(folder, "*"))
                 {
                     var name = Path.GetFileNameWithoutExtension(filePath);
-                    if (!name.StartsWith("preview_", StringComparison.OrdinalIgnoreCase)) continue;
-                    var numberText = name.Substring("preview_".Length);
+                    if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                    var numberText = name.Substring(prefix.Length);
                     if (int.TryParse(numberText, out var number) && number > max) max = number;
                 }
             }
-            return Path.Combine(folder, $"preview_{max + 1}.png");
+            return Path.Combine(folder, $"{prefix}{max + 1}.png");
         }
 
         // =========================================================
@@ -759,7 +1177,7 @@ namespace ModManager.ViewModels
             }
             var bitmap = Clipboard.GetImage();
             if (bitmap == null) return;
-            var newPath = GetNextPreviewPath(folder);
+            var newPath = GetNextPreviewPath(mod);
             try
             {
                 var encoder = new PngBitmapEncoder();
@@ -985,24 +1403,42 @@ namespace ModManager.ViewModels
         // =========================================================
         // INI
         // =========================================================
-        private void ReadIniFile(bool showMissingMessage)
+        private void LoadIniData()
         {
             var mod = SelectedMod;
             if (mod == null) return;
-            var iniPath = FindIniFile(mod);
-            if (iniPath == null)
+
+            mod.IniFiles.Clear();
+            mod.ToggleIniFiles.Clear();
+            mod.SelectedIniFile = null;
+            mod.IniFilePath = null;
+            mod.IniContent = null;
+            var iniPaths = FindIniFiles(mod);
+            if (iniPaths.Count == 0)
             {
-                mod.IniFilePath = null;
-                mod.IniContent = null;
-                mod.IniShortcuts.Clear();
-                if (showMissingMessage) MessageBox.Show("当前 Mod 中未找到符合条件的 INI 文件。", "读取 INI", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             try
             {
-                mod.IniFilePath = iniPath;
-                mod.IniContent = File.ReadAllText(iniPath);
-                LoadIniShortcuts(mod);
+                foreach (var iniPath in iniPaths)
+                {
+                    var content = File.ReadAllText(iniPath);
+                    var folder = GetModFolder(mod);
+                    var relativePath = Directory.Exists(folder)
+                        ? Path.GetRelativePath(folder, iniPath)
+                        : Path.GetFileName(iniPath);
+                    var ini = new IniFileInfo
+                    {
+                        FilePath = iniPath,
+                        RelativePath = relativePath,
+                        Content = content
+                    };
+                    LoadIniShortcuts(ini);
+                    mod.IniFiles.Add(ini);
+                    if (ini.HasToggleKey) mod.ToggleIniFiles.Add(ini);
+                }
+
+                mod.SelectedIniFile = mod.ToggleIniFiles.FirstOrDefault() ?? mod.IniFiles.FirstOrDefault();
                 SaveState();
             }
             catch (Exception ex)
@@ -1014,20 +1450,26 @@ namespace ModManager.ViewModels
         // =========================================================
         // Open INI
         // =========================================================
+        private void SelectIniFile(IniFileInfo ini)
+        {
+            if (SelectedMod == null || ini == null) return;
+            SelectedMod.SelectedIniFile = ini;
+        }
+
         private void OpenIniFile()
         {
             var mod = SelectedMod;
             if (mod == null) return;
-            var iniPath = FindIniFile(mod);
-            if (iniPath == null)
+            var ini = mod.SelectedIniFile ?? mod.ToggleIniFiles.FirstOrDefault() ?? mod.IniFiles.FirstOrDefault();
+            if (ini == null)
             {
                 MessageBox.Show("当前 Mod 中未找到 INI 文件。", "打开 INI", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
             try
             {
-                mod.IniFilePath = iniPath;
-                Process.Start(new ProcessStartInfo(iniPath) { UseShellExecute = true });
+                mod.SelectedIniFile = ini;
+                Process.Start(new ProcessStartInfo(ini.FilePath) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
@@ -1038,26 +1480,43 @@ namespace ModManager.ViewModels
         // =========================================================
         // Find INI
         // =========================================================
-        private string? FindIniFile(Mod mod)
+        private List<string> FindIniFiles(Mod mod)
         {
+            if (mod != null && File.Exists(mod.FilePath))
+            {
+                return string.Equals(Path.GetExtension(mod.FilePath), ".ini", StringComparison.OrdinalIgnoreCase)
+                    ? new List<string> { mod.FilePath }
+                    : new List<string>();
+            }
             var folder = GetModFolder(mod);
-            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return null;
-            return Directory.EnumerateFiles(folder, "*.ini", SearchOption.AllDirectories)
-                .Where(path => !Path.GetFileName(path).Contains("disabled", StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(path => new FileInfo(path).Length)
-                .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
-                .FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return new List<string>();
+            try
+            {
+                return Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                    .Where(path => string.Equals(Path.GetExtension(path), ".ini", StringComparison.OrdinalIgnoreCase))
+                    // The selected Mod folder itself may be named DISABLED_xxx. Only ignore
+                    // disabled folders nested inside that Mod.
+                    .Where(path => !Path.GetRelativePath(folder, path)
+                        .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                        .Any(part => part.StartsWith("DISABLED_", StringComparison.OrdinalIgnoreCase)))
+                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[INI] Find failed for '{folder}': {ex}");
+                return new List<string>();
+            }
         }
 
         // =========================================================
         // INI Shortcuts
         // =========================================================
-        private static void LoadIniShortcuts(Mod mod)
+        private static void LoadIniShortcuts(IniFileInfo ini)
         {
-            mod.IniShortcuts.Clear();
-            if (string.IsNullOrWhiteSpace(mod.IniContent)) return;
+            if (string.IsNullOrWhiteSpace(ini?.Content)) return;
             string? section = null;
-            foreach (var line in mod.IniContent.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            foreach (var line in ini.Content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
             {
                 var text = line.Trim();
                 if (text.StartsWith("[") && text.EndsWith("]"))
@@ -1071,7 +1530,18 @@ namespace ModManager.ViewModels
                 var key = text[..separator].Trim();
                 var value = text[(separator + 1)..].Trim();
                 if (!key.Equals("key", StringComparison.OrdinalIgnoreCase)) continue;
-                mod.IniShortcuts.Add(new IniShortcut { Key = $"{section}: {value}", Value = 0, OptionIndex = 0 });
+                // Different mods use names such as KeyHair or KeyEye instead of KeyToggle.
+                // Any valid key section should make this INI selectable in the UI.
+                ini.HasToggleKey = true;
+                ini.Shortcuts.Add(new IniShortcut
+                {
+                    Key = $"{section}: {value}",
+                    IniFileName = ini.RelativePath,
+                    Section = section,
+                    ShortcutValue = value,
+                    Value = 0,
+                    OptionIndex = 0
+                });
             }
         }
 
@@ -1136,7 +1606,10 @@ namespace ModManager.ViewModels
                     .GroupBy(character => $"{character.GameId}\u0000{character.Id}", StringComparer.OrdinalIgnoreCase)
                     .Select(group => group.First())
                     .ToArray();
-                var snapshot = new StateSnapshot { Games = Games.ToArray(), Characters = allCharacters };
+                var savedGames = Games
+                    .Where(game => !game.IsAddGamePlaceholder)
+                    .ToArray();
+                var snapshot = new StateSnapshot { Games = savedGames, Characters = allCharacters };
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 File.WriteAllText(StateFile, JsonSerializer.Serialize(snapshot, options));
             }

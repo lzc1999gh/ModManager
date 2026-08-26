@@ -81,7 +81,7 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center" />
+            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"/>
             <ToggleButton Grid.Column="1" Style="{StaticResource RoundedImageToggleButton}" Margin="2" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色" BorderThickness="1">
                 <svg:SvgViewbox Width="18" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/sw.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </ToggleButton>
@@ -120,7 +120,8 @@
                             <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="1" Background="Transparent" HorizontalAlignment="Center" Padding="2">
                                 <Border.ContextMenu>
                                     <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                        <MenuItem Header="添加头像" Click="AddCharacterIcon_Click" />
+                                        <MenuItem Header="修改头像" Click="ChangeCharacterIcon_Click" />
+                                        <MenuItem Header="修改角色名" Click="RenameCharacter_Click" />
                                     </ContextMenu>
                                 </Border.ContextMenu>
                                 <Grid>

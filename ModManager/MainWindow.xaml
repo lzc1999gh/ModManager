@@ -4,9 +4,45 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:ModManager.Views"
+        xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
         Title="ModManager" Height="600" Width="1000"
-        Icon="pack://siteoforigin:,,,/Resources/Icons/modManage.png">
+        Icon="pack://siteoforigin:,,,/Resources/Icons/modManage.png"
+        FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+    <Window.Resources>
+        <Style x:Key="RootOpenButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="68" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="12,2" />
+            <Setter Property="Background" Value="#F3F6FA" />
+            <Setter Property="BorderBrush" Value="#A8B7C6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -17,11 +53,69 @@
         <Border Grid.Row="0" Background="#FF2B2B2B" Margin="0,0,0,6">
             <StackPanel Orientation="Horizontal" Margin="8">
                 <TextBlock Text="选择游戏：" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="White" />
-                <ComboBox ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}" DisplayMemberPath="Name" Width="140" VerticalContentAlignment="Center" />
+                <ComboBox ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}"
+                          TextSearch.TextPath="Name"
+                          IsEditable="True" IsReadOnly="True" Width="220" VerticalContentAlignment="Center">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="2,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Width="22" Height="22" Padding="2" Background="Transparent"
+                                        BorderThickness="0" ToolTip="修改游戏"
+                                        Command="{Binding DataContext.EditGameCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/mod.svg" />
+                                </Button>
+                                <Button Grid.Column="2" Width="22" Height="22" Padding="2" Background="Transparent"
+                                        BorderThickness="0" ToolTip="删除游戏"
+                                        Command="{Binding DataContext.DeleteGameCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/del_1.svg" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <TextBlock Text="    Mods 根目录:" VerticalAlignment="Center" Margin="12,0,6,0" Foreground="White" />
-                <TextBox Width="360" Text="{Binding SelectedGame.ModsRootPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" IsReadOnly="True" />
-                <Button Content="设置" Click="BtnSetModsRoot_Click" Margin="8,0" />
-                <Button Content="打开" Command="{Binding OpenModsRootCommand}" Margin="4,0" />
+                <Grid Width="360" Height="28">
+                    <Border Background="#FFFFFF" BorderBrush="#A8B7C6" BorderThickness="1" CornerRadius="14" />
+                    <TextBlock Text="{Binding SelectedGame.ModsRootPath}"
+                               Margin="10,0,82,0" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Foreground="#333333" />
+                    <Button Content="打开" Command="{Binding OpenModsRootCommand}"
+                            Style="{StaticResource RootOpenButtonStyle}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" />
+                </Grid>
             </StackPanel>
         </Border>
 

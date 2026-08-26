@@ -17,11 +17,14 @@ namespace ModManager.Views
         /// </summary>
         /// <param name="title">窗口标题</param>
         /// <param name="prompt">输入框上方的提示文本</param>
-        public InputDialog(string title, string prompt)
+        public InputDialog(string title, string prompt, string initialText = null)
         {
             InitializeComponent();
             Title = title;
             PromptText.Text = prompt;
+            InputTextBox.Text = initialText ?? string.Empty;
+            InputTextBox.SelectAll();
+            InputTextBox.Focus();
         }
 
         /// <summary>

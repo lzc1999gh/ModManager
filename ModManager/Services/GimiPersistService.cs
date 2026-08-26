@@ -438,7 +438,8 @@ namespace ModManager.Services
 
             try
             {
-                return Directory.EnumerateFiles(path, "*.ini", SearchOption.AllDirectories)
+                return Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)
+                    .Where(file => string.Equals(Path.GetExtension(file), ".ini", StringComparison.OrdinalIgnoreCase))
                     .Where(file => !Path.GetFileName(file).StartsWith("DISABLED_", StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }

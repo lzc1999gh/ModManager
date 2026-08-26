@@ -11,7 +11,17 @@ namespace ModManager.Models
         public string Id { get; set; }
         // 角色所属游戏，用于在状态文件中区分不同游戏的角色。
         public string GameId { get; set; }
-        public string Name { get; set; }
+        private string _name;
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                if (_name == value) return;
+                _name = value;
+                OnPropertyChanged();
+            }
+        }
         // 标记是否为列表末尾的“新增角色”占位项（不参与持久化、不视为真实角色）
         [JsonIgnore]
         public bool IsAddPlaceholder { get; set; }

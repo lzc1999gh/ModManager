@@ -85,7 +85,7 @@
                 VerticalAlignment="Center">
 
                 <TextBlock
-                    Text="当前角色Mod"
+                    Text="Mod"
                     FontWeight="Bold"
                     VerticalAlignment="Center" />
 
