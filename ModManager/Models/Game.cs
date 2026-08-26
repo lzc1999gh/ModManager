@@ -7,6 +7,7 @@ namespace ModManager.Models
         private string _path;
         private string _characterInfoPath;
         private string _modsRootPath;
+        private string _d3dxUserIniPath;
 
         public string Id
         {
@@ -62,6 +63,18 @@ namespace ModManager.Models
             {
                 if (_modsRootPath == value) return;
                 _modsRootPath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // Each game may use a different XXMI/3DMigoto user configuration.
+        public string D3dxUserIniPath
+        {
+            get => _d3dxUserIniPath;
+            set
+            {
+                if (_d3dxUserIniPath == value) return;
+                _d3dxUserIniPath = value;
                 OnPropertyChanged();
             }
         }

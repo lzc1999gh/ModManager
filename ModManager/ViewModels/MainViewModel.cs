@@ -176,7 +176,7 @@ namespace ModManager.ViewModels
         // =========================================================
         public MainViewModel()
         {
-            _gimiPersistService = new GimiPersistService(@"H:\XXMI Launcher\GIMI\d3dx_user.ini");
+            _gimiPersistService = new GimiPersistService();
             _addPlaceholder = new Character { Id = Guid.NewGuid().ToString(), Name = "", IsAddPlaceholder = true };
             _addGamePlaceholder = new Game
             {
@@ -574,7 +574,8 @@ namespace ModManager.ViewModels
                 Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
                     ? Path.Combine(StateDirectory, "CharacterPic", id)
                     : dialog.CharacterPicPath.Trim(),
-                ModsRootPath = dialog.ModsRootPath.Trim()
+                ModsRootPath = dialog.ModsRootPath.Trim(),
+                D3dxUserIniPath = dialog.D3dxUserIniPath.Trim()
             };
             var addGameIndex = Games.IndexOf(_addGamePlaceholder);
             if (addGameIndex >= 0)
@@ -633,6 +634,8 @@ namespace ModManager.ViewModels
             game.Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
                 ? Path.Combine(StateDirectory, "CharacterPic", id)
                 : dialog.CharacterPicPath.Trim();
+            game.D3dxUserIniPath = dialog.D3dxUserIniPath.Trim();
+            _gimiPersistService.MoveGamePersistState(oldKey, newKey);
 
             if (cachedCharacters != null)
             {
@@ -671,6 +674,7 @@ namespace ModManager.ViewModels
             var isSelected = ReferenceEquals(game, SelectedGame);
             if (isSelected) SaveCurrentCharactersToCache();
             _charactersByGame.Remove(game.Id ?? game.Name ?? string.Empty);
+            _gimiPersistService.RemoveGamePersistState(game);
             DeleteUserCharacterInfoFile(game);
 
             var nextGame = Games.FirstOrDefault(item =>
@@ -811,7 +815,7 @@ namespace ModManager.ViewModels
                                 _sourcesByModPath.Remove(oldModPath);
                                 _sourcesByModPath[mod.FilePath] = source;
                             }
-                            _gimiPersistService.MovePersistState(oldModPath, mod.FilePath);
+                            _gimiPersistService.MovePersistState(SelectedGame, oldModPath, mod.FilePath);
                         }
                     }
                 }
@@ -922,7 +926,13 @@ namespace ModManager.ViewModels
                 if (mod.Enabled)
                 {
                     Debug.WriteLine($"[GIMI Persist] Toggle OFF: saving {mod.Name}");
-                    _gimiPersistService.SaveCurrentPersist(mod);
+                    _gimiPersistService.SaveCurrentPersist(SelectedGame, mod);
+                }
+                // Disabled -> Enabled：先在 DISABLED_ 路径下恢复历史值，再启用 Mod。
+                if (!mod.Enabled)
+                {
+                    Debug.WriteLine($"[GIMI Persist] Toggle ON: restoring {mod.Name}");
+                    _gimiPersistService.RestorePersist(SelectedGame, mod);
                 }
                 if (Directory.Exists(path))
                 {
@@ -931,12 +941,6 @@ namespace ModManager.ViewModels
                 else if (File.Exists(path))
                 {
                     MoveMod(mod, path, isDirectory: false);
-                }
-                // Disabled -> Enabled：Mod 路径恢复后，再根据 canonical Mod Path 恢复保存的状态
-                if (mod.Enabled)
-                {
-                    Debug.WriteLine($"[GIMI Persist] Toggle ON: restoring {mod.Name}");
-                    _gimiPersistService.RestorePersist(mod);
                 }
                 SaveState();
             }
@@ -1317,6 +1321,8 @@ namespace ModManager.ViewModels
             {
                 if (Directory.Exists(mod.FilePath)) Directory.Delete(mod.FilePath, recursive: true);
                 else if (File.Exists(mod.FilePath)) File.Delete(mod.FilePath);
+                _gimiPersistService.RemovePersistState(SelectedGame, mod);
+                _sourcesByModPath.Remove(mod.FilePath);
                 character.Mods.Remove(mod);
                 SelectedMod = character.Mods.FirstOrDefault(m => m.Enabled) ?? character.Mods.FirstOrDefault();
                 SaveState();
@@ -1372,7 +1378,7 @@ namespace ModManager.ViewModels
                 mod.FilePath = newPath;
                 mod.Name = requestedName;
                 // 重命名后迁移 Persist 状态，防止状态丢失
-                _gimiPersistService.MovePersistState(oldPersistPath, newPath);
+                _gimiPersistService.MovePersistState(SelectedGame, oldPersistPath, newPath);
                 _sourcesByModPath.Remove(oldPath);
                 _sourcesByModPath[newPath] = mod.Source;
                 SaveState();
