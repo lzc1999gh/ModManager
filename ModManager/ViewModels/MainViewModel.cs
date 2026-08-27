@@ -32,6 +32,8 @@ namespace ModManager.ViewModels
         private readonly Character _addPlaceholder;
         // 游戏下拉菜单末尾的“增加游戏”占位项，不参与状态保存。
         private readonly Game _addGamePlaceholder;
+        // 同一份无效配置在一次运行中只提示一次，避免切换面板时重复打断操作。
+        private readonly HashSet<string> _shownModsRootWarnings = new(StringComparer.OrdinalIgnoreCase);
         private bool _ignoreAddGamePlaceholderSelection;
 
         // =========================================================
@@ -85,6 +87,10 @@ namespace ModManager.ViewModels
                 if (!string.IsNullOrEmpty(gamePath) && Directory.Exists(gamePath))
                 {
                     LoadFromModsRoot(gamePath);
+                }
+                else
+                {
+                    ScheduleModsRootWarning(_selectedGame);
                 }
             }
         }
@@ -193,8 +199,8 @@ namespace ModManager.ViewModels
                 ToggleMod(mod);
             }, p => p is Mod);
 
-            OpenModsRootCommand = new RelayCommand(p => OpenModsRoot(), p => !string.IsNullOrEmpty(ModsRootPath));
-            RefreshModsCommand = new RelayCommand(p => RefreshMods(), p => !string.IsNullOrEmpty(ModsRootPath));
+            OpenModsRootCommand = new RelayCommand(p => OpenModsRoot(), p => SelectedGame != null);
+            RefreshModsCommand = new RelayCommand(p => RefreshMods(), p => SelectedGame != null);
 
             AddPreviewCommand = new RelayCommand(p => AddPreview());
             DeletePreviewCommand = new RelayCommand(p => DeletePreview());
@@ -268,6 +274,81 @@ namespace ModManager.ViewModels
             if (!Games.Contains(_addGamePlaceholder)) Games.Add(_addGamePlaceholder);
         }
 
+        private static bool HasValidModsRoot(Game game) =>
+            !string.IsNullOrWhiteSpace(game?.ModsRootPath) && Directory.Exists(game.ModsRootPath);
+
+        private static string DescribeModsRootProblem(string modsRootPath)
+        {
+            return string.IsNullOrWhiteSpace(modsRootPath)
+                ? "尚未设置 Mod 根目录"
+                : $"Mod 根目录不存在或无法访问：\n{modsRootPath}";
+        }
+
+        private static string GetModsRootWarningKey(Game game) =>
+            $"{game?.Id ?? game?.Name}\u001F{game?.ModsRootPath}";
+
+        private void MarkModsRootWarningShown(Game game)
+        {
+            if (game != null && !HasValidModsRoot(game))
+                _shownModsRootWarnings.Add(GetModsRootWarningKey(game));
+        }
+
+        private void ScheduleModsRootWarning(Game game)
+        {
+            if (game == null || HasValidModsRoot(game)) return;
+            var warningKey = GetModsRootWarningKey(game);
+            if (!_shownModsRootWarnings.Add(warningKey)) return;
+
+            Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!ReferenceEquals(game, SelectedGame) || HasValidModsRoot(game)) return;
+                var result = MessageBox.Show(
+                    $"游戏“{game.Name}”{DescribeModsRootProblem(game.ModsRootPath)}。\n\n"
+                    + "Mod 列表、导入和启用/禁用功能将不可用。是否现在修改游戏配置？",
+                    "游戏配置不完整",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (result == MessageBoxResult.Yes) EditGame(game);
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
+
+        private static bool ConfirmModsRootConfiguration(string gameName, string modsRootPath, string operation)
+        {
+            if (!string.IsNullOrWhiteSpace(modsRootPath) && Directory.Exists(modsRootPath)) return true;
+
+            var result = MessageBox.Show(
+                $"游戏“{gameName}”{DescribeModsRootProblem(modsRootPath)}。\n\n"
+                + "可以先保存游戏信息，但 Mod 列表、导入和启用/禁用功能将不可用。是否仍要保存？",
+                operation,
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            return result == MessageBoxResult.Yes;
+        }
+
+        private static bool EnsureValidModsRoot(Game game, string operation)
+        {
+            if (HasValidModsRoot(game)) return true;
+
+            MessageBox.Show(
+                $"无法{operation}：游戏“{game?.Name ?? "当前游戏"}”{DescribeModsRootProblem(game?.ModsRootPath)}。\n\n"
+                + "请在游戏下拉菜单中使用修改功能设置有效的 Mod 根目录。",
+                "游戏配置不完整",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return false;
+        }
+
+        private bool ConfirmDisableWithoutPersistSnapshot(Mod mod)
+        {
+            var result = MessageBox.Show(
+                $"未找到游戏“{SelectedGame?.Name}”的 d3dx_user.ini，无法保存 Mod“{mod.Name}”当前的 Persist 状态。\n\n"
+                + "已有快照会保留，但本次运行时状态可能丢失。是否仍要禁用该 Mod？",
+                "Persist 配置缺失",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            return result == MessageBoxResult.Yes;
+        }
+
         private void OpenModFolder(object parameter)
         {
             if (SelectedMod == null) return;
@@ -285,9 +366,8 @@ namespace ModManager.ViewModels
         // =========================================================
         private void RefreshMods()
         {
-            var path = SelectedGame?.ModsRootPath;
-            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return;
-            LoadFromModsRoot(path);
+            if (!EnsureValidModsRoot(SelectedGame, "刷新 Mod 列表")) return;
+            LoadFromModsRoot(SelectedGame.ModsRootPath);
         }
 
         // =========================================================
@@ -568,6 +648,7 @@ namespace ModManager.ViewModels
                 MessageBox.Show("该游戏 ID 已存在。", "增加游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            if (!ConfirmModsRootConfiguration(name, dialog.ModsRootPath, "增加游戏")) return;
 
             var game = new Game
             {
@@ -579,6 +660,7 @@ namespace ModManager.ViewModels
                 ModsRootPath = dialog.ModsRootPath.Trim(),
                 D3dxUserIniPath = dialog.D3dxUserIniPath.Trim()
             };
+            MarkModsRootWarningShown(game);
             var addGameIndex = Games.IndexOf(_addGamePlaceholder);
             if (addGameIndex >= 0)
                 Games.Insert(addGameIndex, game);
@@ -617,6 +699,7 @@ namespace ModManager.ViewModels
                 MessageBox.Show("该游戏 ID 已存在。", "修改游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+            if (!ConfirmModsRootConfiguration(name, dialog.ModsRootPath, "修改游戏")) return;
 
             var oldKey = game.Id ?? game.Name ?? string.Empty;
             var newKey = id;
@@ -637,6 +720,7 @@ namespace ModManager.ViewModels
                 ? Path.Combine(StateDirectory, "CharacterPic", id)
                 : dialog.CharacterPicPath.Trim();
             game.D3dxUserIniPath = dialog.D3dxUserIniPath.Trim();
+            MarkModsRootWarningShown(game);
             _gimiPersistService.MoveGamePersistState(oldKey, newKey);
 
             if (cachedCharacters != null)
@@ -904,6 +988,7 @@ namespace ModManager.ViewModels
         // =========================================================
         private void OpenModsRoot()
         {
+            if (!EnsureValidModsRoot(SelectedGame, "打开 Mod 根目录")) return;
             try
             {
                 var path = SelectedGame?.ModsRootPath;
@@ -921,6 +1006,7 @@ namespace ModManager.ViewModels
         private void ToggleMod(Mod mod)
         {
             if (mod == null) return;
+            if (!EnsureValidModsRoot(SelectedGame, "切换 Mod 状态")) return;
             try
             {
                 var path = mod.FilePath;
@@ -928,7 +1014,12 @@ namespace ModManager.ViewModels
                 if (mod.Enabled)
                 {
                     Debug.WriteLine($"[GIMI Persist] Toggle OFF: saving {mod.Name}");
-                    _gimiPersistService.SaveCurrentPersist(SelectedGame, mod);
+                    var persistResult = _gimiPersistService.SaveCurrentPersist(SelectedGame, mod);
+                    if (persistResult == PersistSnapshotSaveResult.UserIniUnavailable
+                        && !ConfirmDisableWithoutPersistSnapshot(mod))
+                    {
+                        return;
+                    }
                 }
                 // Disabled -> Enabled：先在 DISABLED_ 路径下恢复历史值，再启用 Mod。
                 if (!mod.Enabled)
@@ -1187,6 +1278,7 @@ namespace ModManager.ViewModels
         {
             var mod = SelectedMod;
             if (mod == null) return;
+            if (!EnsureValidModsRoot(SelectedGame, "添加 Mod 预览图")) return;
             var folder = GetModFolder(mod);
             if (string.IsNullOrEmpty(folder)) return;
             if (!Clipboard.ContainsImage())
@@ -1221,6 +1313,7 @@ namespace ModManager.ViewModels
         {
             var mod = SelectedMod;
             if (mod == null) return;
+            if (!EnsureValidModsRoot(SelectedGame, "删除 Mod 预览图")) return;
             var current = mod.CurrentPreviewPath;
             if (string.IsNullOrEmpty(current)) return;
             try { if (File.Exists(current)) File.Delete(current); } catch { }
@@ -1260,8 +1353,9 @@ namespace ModManager.ViewModels
         // =========================================================
         public void ImportFiles(string[] paths, Character target)
         {
-            var rootPath = SelectedGame?.ModsRootPath;
-            if (paths == null || target == null || string.IsNullOrEmpty(rootPath)) return;
+            if (paths == null || target == null) return;
+            if (!EnsureValidModsRoot(SelectedGame, "导入 Mod")) return;
+            var rootPath = SelectedGame.ModsRootPath;
             var targetDir = Path.Combine(rootPath, target.Name);
             Directory.CreateDirectory(targetDir);
             foreach (var sourcePath in paths)
@@ -1330,6 +1424,7 @@ namespace ModManager.ViewModels
             var mod = SelectedMod;
             var character = SelectedCharacter;
             if (mod == null || character == null || string.IsNullOrWhiteSpace(mod.FilePath)) return;
+            if (!EnsureValidModsRoot(SelectedGame, "删除 Mod")) return;
             var result = MessageBox.Show($"确定要删除 Mod“{mod.Name}”吗？此操作会删除磁盘上的文件，无法撤销。", "删除 Mod", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return;
             try
@@ -1358,6 +1453,11 @@ namespace ModManager.ViewModels
             var requestedName = mod.Name?.Trim();
             mod.OriginalNameDuringEdit = null;
             if (string.IsNullOrWhiteSpace(originalName) || string.Equals(originalName, requestedName, StringComparison.Ordinal)) return;
+            if (!EnsureValidModsRoot(SelectedGame, "修改 Mod 名称"))
+            {
+                mod.Name = originalName;
+                return;
+            }
             if (string.IsNullOrWhiteSpace(requestedName) || requestedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
                 mod.Name = originalName;

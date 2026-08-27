@@ -24,7 +24,7 @@
         <TextBlock Grid.Row="1" Grid.Column="0" Text="游戏名称：" Margin="0,0,8,8" VerticalAlignment="Center" />
         <TextBox x:Name="GameNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="4" />
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Mod根目录：" Margin="0,0,8,8" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Mod根目录（必填）：" Margin="0,0,8,8" VerticalAlignment="Center" />
         <TextBox x:Name="ModsRootTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
         <Button Grid.Row="2" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseModsRoot_Click" />
 
@@ -32,7 +32,7 @@
         <TextBox x:Name="CharacterPicTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
         <Button Grid.Row="3" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseCharacterPic_Click" />
 
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="d3dx_user.ini：" Margin="0,0,8,8" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="d3dx_user.ini（Persist）：" Margin="0,0,8,8" VerticalAlignment="Center" />
         <TextBox x:Name="D3dxUserIniTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
         <Button Grid.Row="4" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseD3dxUserIni_Click" />
 

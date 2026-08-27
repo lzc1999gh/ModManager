@@ -63,9 +63,9 @@ dotnet publish .\ModManager\ModManager.csproj `
 | --- | --- |
 | 游戏 ID | 用于区分游戏和保存游戏状态，建议使用稳定且唯一的短名称。 |
 | 游戏名称 | 在界面中显示的名称。 |
-| Mod 根目录 | 该游戏的 Mods 根目录。角色目录应直接位于此目录下。 |
+| Mod 根目录 | 必填。该游戏的 Mods 根目录，角色目录应直接位于此目录下；未设置或目录不可访问时，Mod 列表、导入和启用/禁用功能不可用。 |
 | 角色头像目录 | 可选。头像文件放置目录；留空时使用应用数据目录。 |
-| `d3dx_user.ini` | 可选。用于读取当前生效 Mod 的 persist 状态；留空时会尝试根据 Mods 根目录推断。 |
+| `d3dx_user.ini` | 用于读取当前生效 Mod 的 persist 状态；留空时会尝试根据 Mods 根目录推断。仅在含 `global persist` 的 Mod 保存状态且无法定位该文件时提示。 |
 
 下拉菜单中的游戏可以修改或删除。删除游戏只删除管理器保存的游戏配置、角色信息和 persist 快照，不会删除磁盘上的 Mods 文件。
 
@@ -131,11 +131,11 @@ global persist $example = 0
 | 文件或目录 | 内容 |
 | --- | --- |
 | `mod_manager_state.json` | 游戏配置、角色状态、Mod 来源等管理器界面状态。 |
-| `mod_persist_snapshots.json` | 按游戏和 Mod 保存的 `global persist` 历史快照。 |
+| `PersistStates\game_<游戏ID>.json` | 每个游戏独立保存的 `global persist` 历史快照。 |
 | `CharacterInfo\<游戏ID>.json` | 用户可修改的角色信息文件。首次修改内置角色列表时会从内置文件复制到这里。 |
 | `CharacterPic\<游戏ID>\` | 未指定头像目录时使用的用户头像目录。 |
 
-旧版本的 `modstate.json` 和 `gimi-persist.json` 会在启动时自动迁移到新的文件名。
+旧版本的 `modstate.json`、`gimi-persist.json` 和合并的 `mod_persist_snapshots.json` 会在启动时自动迁移；迁移成功后会按游戏写入 `PersistStates` 目录。
 
 ## 项目结构
 
@@ -173,4 +173,3 @@ git diff --check
 ## 版本与发布
 
 版本发布使用 Git 标签标记，例如 `v0.1.0`。Windows 发布包由 `.github/workflows/build.yml` 中的 GitHub Actions 在 `master` 分支构建，目标为自包含 `win-x64` 应用。
-
