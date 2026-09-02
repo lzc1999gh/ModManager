@@ -38,11 +38,10 @@
 
 name: .NET Core Desktop
 
+# 注意：此工作流为未配置的模板（环境变量仍为占位符），已禁用自动触发。
+# 实际的构建发布流程见 build.yml。如需使用本模板，请先补全下方 env 配置。
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
 

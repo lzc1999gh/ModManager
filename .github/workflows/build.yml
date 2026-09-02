@@ -1,67 +1,64 @@
-name: Build and Package ModManager
+name: Build and Release ModManager
 
 # 触发工作流的事件
 on:
   push:
-    branches: [ "master" ]  # 当代码推送到 main 分支时触发
-  pull_request:
-    branches: [ "master" ]  # 当有 PR 指向 main 分支时触发
-  workflow_dispatch:        # 允许你从 GitHub Actions 页面手动触发
+    branches: [ "master" ]   # 推送到 master 时自动打包并发布
+  workflow_dispatch:          # 允许从 GitHub Actions 页面手动触发
+
+# Release 需要写权限
+permissions:
+  contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest  # WPF 项目需要在 Windows 环境上构建[reference:1]
+  build-and-release:
+    runs-on: windows-latest   # WPF 项目需要在 Windows 环境上构建
 
     steps:
     # 1. 拉取代码
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. 设置 .NET SDK (请根据你的项目需要调整版本)
+    # 2. 设置 .NET SDK（与项目 TargetFramework=net10.0-windows 匹配）
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x' # 确保此版本与你的项目目标框架兼容[reference:2]
+        dotnet-version: '10.0.x'
 
-    # 3. 还原依赖包
-    - name: Restore dependencies
-      run: dotnet restore ./ModManager/ModManager.csproj
-
-    # 4. 构建项目 (Release 模式)
-    - name: Build project
-      run: dotnet build ./ModManager/ModManager.csproj -c Release --no-restore
-
-    # 5. 发布为独立可执行文件 (这是生成 .exe 的关键步骤)
-    #- name: Publish as single-file executable
-    #  run: |
-    #    dotnet publish ./ModManager/ModManager.csproj `
-    #      -c Release `
-    #      -r win-x64 `
-    #     --self-contained true `
-    #      -p:PublishSingleFile=true `
-    #     -p:IncludeNativeLibrariesForSelfExtract=true `
-    #      -o ./publish/ModManager
-      # -r win-x64: 指定目标平台为 64位 Windows[reference:3]
-      # --self-contained true: 发布为独立应用，自带 .NET 运行时[reference:4]
-      # -p:PublishSingleFile=true: 将所有内容打包成单个 .exe 文件[reference:5]
-      # -p:IncludeNativeLibrariesForSelfExtract=true: 解决原生库的提取问题[reference:6]
-      # -o: 指定输出目录
-
-    # 6. 上传 .exe 文件作为构建产物 (Artifact)
-    #- name: Upload executable as artifact
-    #  uses: actions/upload-artifact@v4
-     # with:
-      #  name: ModManager-win-x64
-       # path: ./publish/ModManager/ModManager.exe
-    - name: Publish as folder (with resources)
+    # 3. 发布为独立应用（自带 .NET 运行时，输出到 ./publish/ModManager）
+    - name: Publish project
       run: |
         dotnet publish ./ModManager/ModManager.csproj `
           -c Release `
           -r win-x64 `
           --self-contained true `
           -o ./publish/ModManager
-    - name: Upload executable and resources
+
+    # 4. 压缩发布目录为 zip 包（Release 附件）
+    - name: Package as zip
+      run: |
+        Compress-Archive -Path ./publish/ModManager/* -DestinationPath ./ModManager-win-x64.zip
+      shell: pwsh
+
+    # 5. 上传构建产物（Artifact，Actions 页面可下载）
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ModManager-win-x64
-        path: ./publish/ModManager   # 上传整个文件夹
+        path: ./publish/ModManager
+
+    # 6. 创建 GitHub Release 并附加 zip 包
+    #    版本号使用 v1.0.<run_number>，每次推送自动递增
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.0.${{ github.run_number }}
+        name: ModManager v1.0.${{ github.run_number }}
+        body: |
+          自动构建发布（提交 ${{ github.sha }}）
+
+          ## 下载说明
+          - 下载下方附件 `ModManager-win-x64.zip`，解压后运行 `ModManager.exe`
+          - 独立发布版本，无需安装 .NET 运行时
+        files: ./ModManager-win-x64.zip
+        generate_release_notes: true
