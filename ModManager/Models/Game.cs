@@ -8,6 +8,7 @@ namespace ModManager.Models
         private string _characterInfoPath;
         private string _modsRootPath;
         private string _d3dxUserIniPath;
+        private string _iconPath = string.Empty;
 
         public string Id
         {
@@ -75,6 +76,19 @@ namespace ModManager.Models
             {
                 if (_d3dxUserIniPath == value) return;
                 _d3dxUserIniPath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 游戏选择栏使用的图标路径，由主视图模型按游戏 ID 选择项目内资源。
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string IconPath
+        {
+            get => _iconPath;
+            set
+            {
+                if (_iconPath == value) return;
+                _iconPath = value;
                 OnPropertyChanged();
             }
         }

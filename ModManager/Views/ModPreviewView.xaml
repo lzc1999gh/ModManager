@@ -22,7 +22,7 @@
 
             <Setter Property="Background"
                     Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeAccentBrush}" />
             <Setter Property="BorderThickness" Value="1" />
 
             <Setter Property="Cursor"
@@ -60,7 +60,7 @@
     <!-- 主布局 -->
     <!-- ===================================================== -->
 
-    <Grid>
+    <Grid Margin="4">
 
         <Grid.RowDefinitions>
 
@@ -80,41 +80,39 @@
         <!-- 标题 -->
         <!-- ================================================= -->
 
-        <TextBlock Grid.Row="0"
-                   Text="预览"
-                   FontWeight="Bold"
-                   Margin="4" />
+        <DockPanel Grid.Row="0" Margin="4">
+            <TextBlock Text="预览" FontWeight="Bold" />
+            <TextBlock Text="{Binding SelectedMod.PreviewPaths.Count, StringFormat={}（共 {0} 张）}"
+                       Foreground="{StaticResource ThemeMutedTextBrush}"
+                       Margin="0,0,0,0" />
+        </DockPanel>
 
 
         <!-- ================================================= -->
         <!-- 图片预览区域 -->
         <!-- ================================================= -->
 
-        <Grid x:Name="PreviewArea"
-              Grid.Row="1"
-              Margin="2"
-              Background="Transparent">
+        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="2">
+            <Grid x:Name="PreviewArea" Background="Transparent">
 
-            <Grid.ColumnDefinitions>
+                <Grid.ColumnDefinitions>
 
-                <!-- 左侧 1/3 -->
-                <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
 
-                <!-- 中间 1/3 -->
-                <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
 
-                <!-- 右侧 1/3 -->
-                <ColumnDefinition Width="1*" />
-
-            </Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*" />
+                    
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
 
 
-            <!-- ================================================= -->
-            <!-- Mod 图片 -->
-            <!-- ================================================= -->
+                <!-- ================================================= -->
+                <!-- Mod 图片 -->
+                <!-- ================================================= -->
 
-            <Image Grid.Column="0"
-                   Grid.ColumnSpan="3"
+                <Image Grid.Column="0"
+                   Grid.ColumnSpan="4"
                    Source="{Binding SelectedMod.CurrentPreviewPath,
                                     Converter={StaticResource ImagePathToImageSource}}"
                    Stretch="Uniform"
@@ -122,11 +120,11 @@
                    VerticalAlignment="Center" />
 
 
-            <!-- ================================================= -->
-            <!-- 上一张按钮 -->
-            <!-- ================================================= -->
+                <!-- ================================================= -->
+                <!-- 上一张按钮 -->
+                <!-- ================================================= -->
 
-            <Button Grid.Column="0"
+                <Button Grid.Column="0"
                     Command="{Binding PrevPreviewCommand}"
                     Style="{StaticResource PreviewNavigationButton}"
                     HorizontalAlignment="Stretch"
@@ -134,108 +132,111 @@
                     ToolTip="上一张预览"
                    >
 
-                <svg:SvgViewbox Source="pack://siteoforigin:,,,/Resources/Icons/prev.svg"
+                    <svg:SvgViewbox Source="pack://siteoforigin:,,,/Resources/Icons/prev.svg"
                 Stretch="Uniform"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
 
-                    <svg:SvgViewbox.Style>
-                        <Style TargetType="svg:SvgViewbox">
+                        <svg:SvgViewbox.Style>
+                            <Style TargetType="svg:SvgViewbox">
 
-                            <Setter Property="Width" Value="30" />
-                            <Setter Property="Height" Value="30" />
+                                <Setter Property="Width" Value="30" />
+                                <Setter Property="Height" Value="30" />
 
-                            <Style.Triggers>
+                                <Style.Triggers>
 
-                                <DataTrigger Binding="{Binding IsMouseOver,
+                                    <DataTrigger Binding="{Binding IsMouseOver,
                                                RelativeSource={RelativeSource AncestorType=Button}}"
                              Value="True">
 
-                                    <Setter Property="Width" Value="45" />
-                                    <Setter Property="Height" Value="45" />
+                                        <Setter Property="Width" Value="45" />
+                                        <Setter Property="Height" Value="45" />
 
-                                </DataTrigger>
+                                    </DataTrigger>
 
-                            </Style.Triggers>
+                                </Style.Triggers>
 
-                        </Style>
-                    </svg:SvgViewbox.Style>
+                            </Style>
+                        </svg:SvgViewbox.Style>
 
-                </svg:SvgViewbox>
+                    </svg:SvgViewbox>
 
-            </Button>
-
-
-            <!-- ================================================= -->
-            <!-- 中间区域 -->
-            <!-- ================================================= -->
-
-            <Grid Grid.Column="1"
-                  Background="Transparent" />
+                </Button>
 
 
-            <!-- ================================================= -->
-            <!-- 下一张按钮 -->
-            <!-- ================================================= -->
+                <!-- ================================================= -->
+                <!-- 中间区域 -->
+                <!-- ================================================= -->
 
-            <Button Grid.Column="2"
+                <Grid Grid.Column="1" Background="Transparent" />
+
+                <Grid Grid.Column="2" Background="Transparent" />
+                <!-- ================================================= -->
+                <!-- 下一张按钮 -->
+                <!-- ================================================= -->
+
+                <Button Grid.Column="4"
                     Command="{Binding NextPreviewCommand}"
                     Style="{StaticResource PreviewNavigationButton}"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     ToolTip="下一张预览">
 
-                <svg:SvgViewbox Source="pack://siteoforigin:,,,/Resources/Icons/next.svg"
+                    <svg:SvgViewbox Source="pack://siteoforigin:,,,/Resources/Icons/next.svg"
                 Stretch="Uniform"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
 
-                    <svg:SvgViewbox.Style>
-                        <Style TargetType="svg:SvgViewbox">
+                        <svg:SvgViewbox.Style>
+                            <Style TargetType="svg:SvgViewbox">
 
-                            <Setter Property="Width" Value="30" />
-                            <Setter Property="Height" Value="30" />
+                                <Setter Property="Width" Value="30" />
+                                <Setter Property="Height" Value="30" />
 
-                            <Style.Triggers>
+                                <Style.Triggers>
 
-                                <DataTrigger Binding="{Binding IsMouseOver,
+                                    <DataTrigger Binding="{Binding IsMouseOver,
                                                RelativeSource={RelativeSource AncestorType=Button}}"
                              Value="True">
 
-                                    <Setter Property="Width" Value="45" />
-                                    <Setter Property="Height" Value="45" />
+                                        <Setter Property="Width" Value="45" />
+                                        <Setter Property="Height" Value="45" />
 
-                                </DataTrigger>
+                                    </DataTrigger>
 
-                            </Style.Triggers>
+                                </Style.Triggers>
 
-                        </Style>
-                    </svg:SvgViewbox.Style>
+                            </Style>
+                        </svg:SvgViewbox.Style>
 
-                </svg:SvgViewbox>
-            </Button>
+                    </svg:SvgViewbox>
+                </Button>
 
 
-            <!-- ================================================= -->
-            <!-- 右键菜单 -->
-            <!-- ================================================= -->
+                <!-- ================================================= -->
+                <!-- 右键菜单 -->
+                <!-- ================================================= -->
 
-            <Grid.ContextMenu>
+                <Grid.ContextMenu>
 
-                <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
+                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext,
                     RelativeSource={RelativeSource Self}}">
 
-                    <MenuItem Header="添加预览"
+                        <MenuItem Header="添加预览图（可多选）"
                               Command="{Binding AddPreviewCommand}" />
 
-                    <MenuItem Header="删除预览"
+                        <MenuItem Header="从剪贴板添加预览"
+                              Command="{Binding AddPreviewFromClipboardCommand}" />
+
+                        <MenuItem Header="删除预览"
                               Command="{Binding DeletePreviewCommand}" />
 
-                </ContextMenu>
+                    </ContextMenu>
 
-            </Grid.ContextMenu>
+                </Grid.ContextMenu>
 
-        </Grid>
+            </Grid>
+        </Border>
 
 
         <!-- ================================================= -->
@@ -245,9 +246,9 @@
         <TextBlock Grid.Row="2"
                    Text="{Binding SelectedMod.FilePath}"
                    FontSize="11"
-                   Foreground="Gray"
+                   Foreground="{StaticResource ThemeMutedTextBrush}"
                    TextWrapping="Wrap"
-                   Margin="4" />
+                   Margin="4,4,4,0" />
 
     </Grid>
 

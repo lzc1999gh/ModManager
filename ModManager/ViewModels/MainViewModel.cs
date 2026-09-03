@@ -133,6 +133,7 @@ namespace ModManager.ViewModels
         public ICommand OpenModsRootCommand { get; }
         public ICommand RefreshModsCommand { get; }
         public ICommand AddPreviewCommand { get; }
+        public ICommand AddPreviewFromClipboardCommand { get; }
         public ICommand DeletePreviewCommand { get; }
         public ICommand PrevPreviewCommand { get; }
         public ICommand NextPreviewCommand { get; }
@@ -189,6 +190,7 @@ namespace ModManager.ViewModels
             {
                 Id = Guid.NewGuid().ToString(),
                 Name = "增加游戏",
+                IconPath = GetPackagedIconPath("add.svg"),
                 IsAddGamePlaceholder = true
             };
 
@@ -202,7 +204,8 @@ namespace ModManager.ViewModels
             OpenModsRootCommand = new RelayCommand(p => OpenModsRoot(), p => SelectedGame != null);
             RefreshModsCommand = new RelayCommand(p => RefreshMods(), p => SelectedGame != null);
 
-            AddPreviewCommand = new RelayCommand(p => AddPreview());
+            AddPreviewCommand = new RelayCommand(p => AddPreviewsFromFiles(), p => SelectedMod != null);
+            AddPreviewFromClipboardCommand = new RelayCommand(p => AddPreviewFromClipboard(), p => SelectedMod != null);
             DeletePreviewCommand = new RelayCommand(p => DeletePreview());
             PrevPreviewCommand = new RelayCommand(p => PrevPreview());
             NextPreviewCommand = new RelayCommand(p => NextPreview());
@@ -250,6 +253,7 @@ namespace ModManager.ViewModels
 
             MigrateLegacyStateFile();
             LoadStateOrSample();
+            foreach (var game in Games) EnsureGameIconPath(game);
             EnsureAddGamePlaceholder();
 
             CharactersView = CollectionViewSource.GetDefaultView(Characters);
@@ -271,7 +275,24 @@ namespace ModManager.ViewModels
         // =========================================================
         private void EnsureAddGamePlaceholder()
         {
+            _addGamePlaceholder.IconPath = GetPackagedIconPath("add.svg");
             if (!Games.Contains(_addGamePlaceholder)) Games.Add(_addGamePlaceholder);
+        }
+
+        private static string GetPackagedIconPath(string fileName) =>
+            $"pack://siteoforigin:,,,/Resources/Icons/{fileName}";
+
+        private static void EnsureGameIconPath(Game game)
+        {
+            if (game == null || game.IsAddGamePlaceholder) return;
+
+            var gameId = game.Id?.Trim() ?? string.Empty;
+            var iconName = gameId.Equals("GI", StringComparison.OrdinalIgnoreCase)
+                ? "GI.svg"
+                : gameId.Equals("WW", StringComparison.OrdinalIgnoreCase)
+                    ? "WW.svg"
+                    : "mod.svg";
+            game.IconPath = GetPackagedIconPath(iconName);
         }
 
         private static bool HasValidModsRoot(Game game) =>
@@ -331,7 +352,7 @@ namespace ModManager.ViewModels
 
             MessageBox.Show(
                 $"无法{operation}：游戏“{game?.Name ?? "当前游戏"}”{DescribeModsRootProblem(game?.ModsRootPath)}。\n\n"
-                + "请在游戏下拉菜单中使用修改功能设置有效的 Mod 根目录。",
+                + "请在左侧游戏图标栏中使用右键菜单的修改功能设置有效的 Mod 根目录。",
                 "游戏配置不完整",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -660,6 +681,7 @@ namespace ModManager.ViewModels
                 ModsRootPath = dialog.ModsRootPath.Trim(),
                 D3dxUserIniPath = dialog.D3dxUserIniPath.Trim()
             };
+            EnsureGameIconPath(game);
             MarkModsRootWarningShown(game);
             var addGameIndex = Games.IndexOf(_addGamePlaceholder);
             if (addGameIndex >= 0)
@@ -720,6 +742,7 @@ namespace ModManager.ViewModels
                 ? Path.Combine(StateDirectory, "CharacterPic", id)
                 : dialog.CharacterPicPath.Trim();
             game.D3dxUserIniPath = dialog.D3dxUserIniPath.Trim();
+            EnsureGameIconPath(game);
             MarkModsRootWarningShown(game);
             _gimiPersistService.MoveGamePersistState(oldKey, newKey);
 
@@ -1249,10 +1272,14 @@ namespace ModManager.ViewModels
         // =========================================================
         // Next Preview Path
         // =========================================================
-        private string GetNextPreviewPath(Mod mod)
+        private string GetNextPreviewPath(Mod mod, string extension = ".png")
         {
             var folder = GetModFolder(mod);
             if (string.IsNullOrWhiteSpace(folder)) return null;
+
+            extension = string.IsNullOrWhiteSpace(extension) ? ".png" : extension.Trim();
+            if (!extension.StartsWith(".", StringComparison.Ordinal)) extension = "." + extension;
+            extension = extension.ToLowerInvariant();
 
             var prefix = Directory.Exists(mod.FilePath)
                 ? "preview_"
@@ -1268,13 +1295,62 @@ namespace ModManager.ViewModels
                     if (int.TryParse(numberText, out var number) && number > max) max = number;
                 }
             }
-            return Path.Combine(folder, $"{prefix}{max + 1}.png");
+            return Path.Combine(folder, $"{prefix}{max + 1}{extension}");
         }
 
         // =========================================================
         // Add Preview
         // =========================================================
-        private void AddPreview()
+        private void AddPreviewsFromFiles()
+        {
+            var mod = SelectedMod;
+            if (mod == null) return;
+            if (!EnsureValidModsRoot(SelectedGame, "添加 Mod 预览图")) return;
+            var folder = GetModFolder(mod);
+            if (string.IsNullOrEmpty(folder)) return;
+
+            var dialog = new OpenFileDialog
+            {
+                Title = "选择 Mod 预览图（可多选）",
+                Filter = "图片文件|*.png;*.jpg;*.jpeg|PNG 图片|*.png|JPEG 图片|*.jpg;*.jpeg",
+                Multiselect = true,
+                CheckFileExists = true,
+                CheckPathExists = true
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            if (mod.PreviewPaths == null)
+                mod.PreviewPaths = new ObservableCollection<string>();
+
+            var addedCount = 0;
+            foreach (var sourcePath in dialog.FileNames)
+            {
+                try
+                {
+                    var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+                    if (extension != ".png" && extension != ".jpg" && extension != ".jpeg") continue;
+                    var newPath = GetNextPreviewPath(mod, extension);
+                    File.Copy(sourcePath, newPath, overwrite: false);
+                    mod.PreviewPaths.Add(newPath);
+                    addedCount++;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Preview] Failed to copy '{sourcePath}': {ex}");
+                }
+            }
+
+            if (addedCount == 0)
+            {
+                MessageBox.Show("没有成功添加预览图片。", "添加预览", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            mod.CurrentPreviewIndex = mod.PreviewPaths.Count - 1;
+            SaveState();
+        }
+
+        private void AddPreviewFromClipboard()
         {
             var mod = SelectedMod;
             if (mod == null) return;
@@ -1283,12 +1359,13 @@ namespace ModManager.ViewModels
             if (string.IsNullOrEmpty(folder)) return;
             if (!Clipboard.ContainsImage())
             {
-                MessageBox.Show("剪贴板中没有图片", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("剪贴板中没有图片", "添加预览", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
+
             var bitmap = Clipboard.GetImage();
             if (bitmap == null) return;
-            var newPath = GetNextPreviewPath(mod);
+            var newPath = GetNextPreviewPath(mod, ".png");
             try
             {
                 var encoder = new PngBitmapEncoder();

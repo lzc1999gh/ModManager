@@ -1,4 +1,5 @@
 <Window x:Class="ModManager.MainWindow"
+        x:Name="RootWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -6,7 +7,7 @@
         xmlns:views="clr-namespace:ModManager.Views"
         xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
-        Title="ModManager" Height="600" Width="1000"
+        Title="ModManager" Height="600" Width="1100"
         Icon="pack://siteoforigin:,,,/Resources/Icons/modManage.png"
         FontFamily="Microsoft YaHei UI, Microsoft YaHei, Segoe UI"
         UseLayoutRounding="True"
@@ -19,7 +20,7 @@
             <Setter Property="Height" Value="24" />
             <Setter Property="Padding" Value="12,2" />
             <Setter Property="Background" Value="#F3F6FA" />
-            <Setter Property="BorderBrush" Value="#A8B7C6" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -32,7 +33,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
@@ -42,100 +43,152 @@
                 </Setter.Value>
             </Setter>
         </Style>
-    </Window.Resources>
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
 
-        <!-- toolbar -->
-        <Border Grid.Row="0" Background="#FF2B2B2B" Margin="0,0,0,6">
-            <StackPanel Orientation="Horizontal" Margin="8">
-                <TextBlock Text="选择游戏：" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="White" />
-                <ComboBox ItemsSource="{Binding Games}" SelectedItem="{Binding SelectedGame}"
-                          TextSearch.TextPath="Name"
-                          IsEditable="True" IsReadOnly="True" Width="220" VerticalContentAlignment="Center">
-                    <ComboBox.ItemContainerStyle>
-                        <Style TargetType="ComboBoxItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        </Style>
-                    </ComboBox.ItemContainerStyle>
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="2,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" />
-                                <Button Grid.Column="1" Width="22" Height="22" Padding="2" Background="Transparent"
-                                        BorderThickness="0" ToolTip="修改游戏"
-                                        Command="{Binding DataContext.EditGameCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                        CommandParameter="{Binding}">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/mod.svg" />
-                                </Button>
-                                <Button Grid.Column="2" Width="22" Height="22" Padding="2" Background="Transparent"
-                                        BorderThickness="0" ToolTip="删除游戏"
-                                        Command="{Binding DataContext.DeleteGameCommand, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                        CommandParameter="{Binding}">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/del_1.svg" />
-                                </Button>
-                            </Grid>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Text="    Mods 根目录:" VerticalAlignment="Center" Margin="12,0,6,0" Foreground="White" />
-                <Grid Width="360" Height="28">
-                    <Border Background="#FFFFFF" BorderBrush="#A8B7C6" BorderThickness="1" CornerRadius="14" />
-                    <TextBlock Text="{Binding SelectedGame.ModsRootPath}"
-                               Margin="10,0,82,0" VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis" Foreground="#333333" />
-                    <Button Content="打开" Command="{Binding OpenModsRootCommand}"
-                            Style="{StaticResource RootOpenButtonStyle}"
-                            HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" />
-                </Grid>
-            </StackPanel>
+        <Style x:Key="GameListItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Width" Value="54" />
+            <Setter Property="Height" Value="54" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ItemBorder" Background="Transparent" BorderBrush="Transparent"
+                                BorderThickness="1" CornerRadius="9" Padding="3"
+                                Width="54" Height="54">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#E8F3FF" />
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource ThemeAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#F5F8FC" />
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource ThemeBorderStrongBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="76" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧游戏图标栏 -->
+        <Border Grid.Column="0" Background="#FFFFFF">
+            <Grid Margin="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" >
+                    <ListBox ItemsSource="{Binding Games}"
+                             SelectedItem="{Binding SelectedGame, Mode=TwoWay}"
+                             Background="Transparent" BorderThickness="0" Padding="2"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ItemContainerStyle="{StaticResource GameListItemStyle}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="45" Height="45" Background="Transparent"
+                                        HorizontalAlignment="Center" ToolTip="{Binding Name}">
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="修改游戏" Click="EditGameMenuItem_Click">
+                                        <MenuItem.Icon>
+                                            <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/mod.svg" />
+                                        </MenuItem.Icon>
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                    <MenuItem Header="删除游戏" Click="DeleteGameMenuItem_Click">
+                                        <MenuItem.Icon>
+                                            <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/del_1.svg" />
+                                        </MenuItem.Icon>
+                                        <MenuItem.Style>
+                                            <Style TargetType="MenuItem">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsAddGamePlaceholder}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </MenuItem.Style>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Border.ContextMenu>
+                                    <svg:SvgViewbox Width="42" Height="42" Source="{Binding IconPath}"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" />
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
         </Border>
 
-        <!-- Main 2x2 layout -->
-        <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="1*" />
-                <ColumnDefinition Width="1*" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <views:CharacterView Grid.Row="0" Grid.Column="0" Grid.RowSpan="2" MinWidth="0" HorizontalAlignment="Stretch" />
-            <views:ModListView Grid.Row="0" Grid.Column="1" Grid.RowSpan="2"/>
-            <views:ModDetailView Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" />
-            <views:ModPreviewView Grid.Row="0" Grid.Column="3" Grid.RowSpan="2"/>
+            <!-- 顶部信息栏 -->
+            <Border Grid.Row="0" Background="#FF2B2B2B"
+                    BorderBrush="{StaticResource ThemeAccentBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,6">
+                <StackPanel Orientation="Horizontal" Margin="10,8">
+                    <TextBlock Text="{Binding SelectedGame.Name, StringFormat=游戏：{0}}"
+                               FontWeight="Bold" VerticalAlignment="Center" Foreground="White" />
+                    <TextBlock Text="    Mods 根目录：" VerticalAlignment="Center" Margin="14,0,6,0"
+                               Foreground="White" />
+                    <Grid Width="420" Height="28">
+                        <Border Background="#FFFFFF" BorderBrush="{StaticResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="14" />
+                        <TextBlock Text="{Binding SelectedGame.ModsRootPath}"
+                                   Margin="10,0,82,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Foreground="{StaticResource ThemeTextBrush}" />
+                        <Button Content="打开" Command="{Binding OpenModsRootCommand}"
+                                Style="{StaticResource RootOpenButtonStyle}"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 主内容 -->
+            <Grid Grid.Row="1" Margin="6,0,6,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+                <views:CharacterView Grid.Column="0" MinWidth="0" HorizontalAlignment="Stretch" />
+                <views:ModListView Grid.Column="1" />
+                <views:ModDetailView Grid.Column="2" Loaded="ModDetailView_Loaded" />
+                <views:ModPreviewView Grid.Column="3" />
+            </Grid>
         </Grid>
     </Grid>
 </Window>

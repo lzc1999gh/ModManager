@@ -18,8 +18,8 @@
             <Setter Property="VerticalOffset" Value="10" />
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="Background" Value="#F8F8F8" />
-            <Setter Property="Foreground" Value="#222222" />
-            <Setter Property="BorderBrush" Value="#BBBBBB" />
+            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="MaxWidth" Value="500" />
@@ -47,7 +47,7 @@
             <Setter Property="Height" Value="28" />
             <Setter Property="Padding" Value="3" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -57,7 +57,7 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" /></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" /></Trigger>
                             <Trigger Property="IsPressed" Value="True"><Setter TargetName="Border" Property="Background" Value="#E8F3FF" /></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -93,7 +93,7 @@
                     Text="{Binding SelectedCharacter.Mods.Count, StringFormat='({0})'}"
                     VerticalAlignment="Center"
                     Margin="5,0,0,0"
-                    Foreground="#33CC66" />
+                    Foreground="{StaticResource ThemeAccentBrightBrush}" />
             </StackPanel>
 
             <Button
@@ -111,7 +111,7 @@
         </Grid>
 
         <!-- Mod 列表 -->
-        <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="3">
+        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="3">
             <ListBox
             Grid.Row="1"
             ItemsSource="{Binding SelectedCharacter.Mods}"
@@ -147,7 +147,7 @@
                                     x:Name="Bd"
                                     CornerRadius="6"
                                     BorderThickness="1"
-                                    BorderBrush="#000000"
+                                    BorderBrush="{StaticResource ThemeBorderBrush}"
                                     Background="#FFFFFF"
                                     SnapsToDevicePixels="True"
                                     HorizontalAlignment="Stretch">
@@ -183,13 +183,13 @@
                                                             <Setter.Value>
                                                                 <ControlTemplate TargetType="ToggleButton">
                                                                     <Grid Width="34" Height="20">
-                                                                        <Border x:Name="Track" Background="#A8A8A8" CornerRadius="10" />
+                                                                        <Border x:Name="Track" Background="{StaticResource ThemeBorderBrush}" CornerRadius="10" />
                                                                         <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" Margin="2"
                                                                              HorizontalAlignment="Left" VerticalAlignment="Center" />
                                                                     </Grid>
                                                                     <ControlTemplate.Triggers>
                                                                         <Trigger Property="IsChecked" Value="True">
-                                                                            <Setter TargetName="Track" Property="Background" Value="#33CC66" />
+                                                                            <Setter TargetName="Track" Property="Background" Value="{StaticResource ThemeAccentBrush}" />
                                                                             <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
                                                                         </Trigger>
                                                                         <Trigger Property="IsMouseOver" Value="True">
@@ -212,7 +212,7 @@
                                             <Setter
                                             TargetName="Bd"
                                             Property="BorderBrush"
-                                            Value="#33CC66" />
+                                            Value="{StaticResource ThemeAccentBrush}" />
                                             <Setter
                                             TargetName="Bd"
                                             Property="Background"
@@ -225,7 +225,7 @@
                                             <Setter
                                             TargetName="Bd"
                                             Property="BorderBrush"
-                                            Value="#3399FF" />
+                                            Value="{StaticResource ThemeAccentBrightBrush}" />
                                             <Setter
                                             TargetName="Bd"
                                             Property="BorderThickness"
@@ -239,7 +239,7 @@
                                             <Setter
                                             TargetName="Bd"
                                             Property="BorderBrush"
-                                            Value="#666666" />
+                                            Value="{StaticResource ThemeAccentBrightBrush}" />
 
                                         </Trigger>
                                     </ControlTemplate.Triggers>
@@ -261,7 +261,7 @@
                         <TextBlock Text="{Binding Name}"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Stretch"
-                               Foreground="Black"
+                               Foreground="{StaticResource ThemeTextBrush}"
                                FontSize="13"
                                TextTrimming="CharacterEllipsis"
                                TextWrapping="NoWrap" />

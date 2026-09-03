@@ -16,7 +16,7 @@
             <Setter Property="Height" Value="28" />
             <Setter Property="Padding" Value="3" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -31,10 +31,10 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#E8F7ED" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#33CC66" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource ThemeAccentBrush}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -46,7 +46,7 @@
             <Setter Property="Height" Value="28" />
             <Setter Property="Padding" Value="3" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -60,7 +60,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#E8F3FF" />
@@ -81,157 +81,159 @@
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,0,0"/>
+            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center"/>
             <ToggleButton Grid.Column="1" Style="{StaticResource RoundedImageToggleButton}" Margin="2" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色" BorderThickness="1">
                 <svg:SvgViewbox Width="18" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/sw.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </ToggleButton>
         </Grid>
 
-        <ListBox Grid.Row="1" ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" MinWidth="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0" Padding="0" Margin="0">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <!-- 使用横向 WrapPanel 并设置 ItemWidth，这样会自动换行形成多列并支持纵向滚动 -->
-                    <WrapPanel IsItemsHost="True" Orientation="Horizontal" ItemWidth="70" ItemHeight="80" />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Width="70" Margin="0" HorizontalAlignment="Center">
-                        <!-- 普通角色项：头像 + 名字（占位项时隐藏） -->
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <StackPanel.ToolTip>
-                                <ToolTip>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" />
-                                        <TextBlock Text="{Binding ModCount, StringFormat=Mod数量: {0}}" />
-                                    </StackPanel>
-                                </ToolTip>
-                            </StackPanel.ToolTip>
-                            <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="1" Background="Transparent" HorizontalAlignment="Center" Padding="2">
-                                <Border.ContextMenu>
-                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                        <MenuItem Header="修改头像" Click="ChangeCharacterIcon_Click" />
-                                        <MenuItem Header="修改角色名" Click="RenameCharacter_Click" />
-                                    </ContextMenu>
-                                </Border.ContextMenu>
-                                <Grid>
-                                    <Image Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}}" Stretch="UniformToFill" />
-                                    <TextBlock Text="无头像" Foreground="#888888" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IconPath}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                    <DataTrigger Binding="{Binding IconPath}" Value="">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </Grid>
-                            </Border>
-                            <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Width="70">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <!-- 默认颜色（可根据主题调整，这里设为黑色） -->
-                                        <Setter Property="Foreground" Value="Black" />
+        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="1" Margin="0,0,2,0">
+            <ListBox ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" MinWidth="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0" Padding="0" Margin="0">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <!-- 使用横向 WrapPanel 并设置 ItemWidth，这样会自动换行形成多列并支持纵向滚动 -->
+                        <WrapPanel IsItemsHost="True" Orientation="Horizontal" ItemWidth="70" ItemHeight="80" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Width="70" Margin="0" HorizontalAlignment="Center">
+                            <!-- 普通角色项：头像 + 名字（占位项时隐藏） -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible" />
                                         <Style.Triggers>
-                                            <!-- 当 ModCount > 0 时，转换器返回 Visibility.Visible -->
-                                            <DataTrigger Binding="{Binding ModCount, Converter={StaticResource IntGtZeroToVis}}" Value="Visible">
-                                                <Setter Property="Foreground" Value="#FF0000" />
+                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
-                        <StackPanel>
-                            <!-- 新增角色占位按钮（仅占位项显示） -->
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-                            <Button Width="50" Height="50"
+                                </StackPanel.Style>
+                                <StackPanel.ToolTip>
+                                    <ToolTip>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                            <TextBlock Text="{Binding ModCount, StringFormat=Mod数量: {0}}" />
+                                        </StackPanel>
+                                    </ToolTip>
+                                </StackPanel.ToolTip>
+                                <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="1" Background="Transparent" HorizontalAlignment="Center" Padding="2">
+                                    <Border.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="修改头像" Click="ChangeCharacterIcon_Click" />
+                                            <MenuItem Header="修改角色名" Click="RenameCharacter_Click" />
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
+                                    <Grid>
+                                        <Image Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}}" Stretch="UniformToFill" />
+                                        <TextBlock Text="无头像" Foreground="{StaticResource ThemeMutedTextBrush}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IconPath}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IconPath}" Value="">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{Binding Name}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Width="70">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <!-- 默认颜色（可根据主题调整，这里设为黑色） -->
+                                            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+                                            <Style.Triggers>
+                                                <!-- 当 ModCount > 0 时，转换器返回 Visibility.Visible -->
+                                                <DataTrigger Binding="{Binding ModCount, Converter={StaticResource IntGtZeroToVis}}" Value="Visible">
+                                                    <Setter Property="Foreground" Value="{StaticResource ThemeAccentBrightBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                            <StackPanel>
+                                <!-- 新增角色占位按钮（仅占位项显示） -->
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <Button Width="50" Height="50"
                                     Command="{Binding DataContext.AddCharacterCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                     ToolTip="新增角色"
                                     HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Button.Style>
-                                    <Style TargetType="Button" BasedOn="{StaticResource ImageButtonStyle}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                                <svg:SvgViewbox Width="22" Height="22" Source="pack://siteoforigin:,,,/Resources/Icons/add.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Button>
-                            <TextBlock Text="&#x65B0;&#x589E;&#x89D2;&#x8272;" FontSize="11" Foreground="Black" TextAlignment="Center" TextWrapping="Wrap" Width="70">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource ImageButtonStyle}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <svg:SvgViewbox Width="22" Height="22" Source="pack://siteoforigin:,,,/Resources/Icons/add.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Button>
+                                <TextBlock Text="&#x65B0;&#x589E;&#x89D2;&#x8272;" FontSize="11" Foreground="{StaticResource ThemeAccentBrightBrush}" TextAlignment="Center" TextWrapping="Wrap" Width="70">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAddPlaceholder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                    <!-- 基础外观设置 -->
-                    <Setter Property="Background" Value="Transparent" />
-                    <Setter Property="BorderBrush" Value="Transparent" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <!-- 基础外观设置 -->
+                        <Setter Property="Background" Value="Transparent" />
+                        <Setter Property="BorderBrush" Value="Transparent" />
 
-                    <!-- 触发器：当该项被选中时 -->
-                    <Style.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="Transparent" />
-                            <!-- 半透明背景 -->
-                            <Setter Property="BorderBrush" Value="Transparent" />
-                            <!-- 边框 -->
-                            <Setter Property="Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect Color="Transparent" BlurRadius="12" ShadowDepth="0" />
-                                    <!-- 发光阴影 -->
-                                </Setter.Value>
-                            </Setter>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="BorderBrush" Value="Transparent" />
-                            <!-- 悬停边框颜色 -->
-                            <Setter Property="Background" Value="Transparent" />
-                            <!-- 半透明背景 -->
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </ListBox.ItemContainerStyle>
-        </ListBox>
+                        <!-- 触发器：当该项被选中时 -->
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="Transparent" />
+                                <!-- 半透明背景 -->
+                                <Setter Property="BorderBrush" Value="Transparent" />
+                                <!-- 边框 -->
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="Transparent" BlurRadius="12" ShadowDepth="0" />
+                                        <!-- 发光阴影 -->
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="Transparent" />
+                                <!-- 悬停边框颜色 -->
+                                <Setter Property="Background" Value="Transparent" />
+                                <!-- 半透明背景 -->
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </Border>
     </Grid>
 </UserControl>
 

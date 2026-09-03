@@ -8,7 +8,7 @@
     <UserControl.Resources>
         <Style x:Key="ImageButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="#A0A0A0" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Margin" Value="2" />
             <Setter Property="Template">
@@ -20,7 +20,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="#E8F3FF" />
@@ -32,7 +32,7 @@
         </Style>
         <Style x:Key="IniFileButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#F3F6FA" />
-            <Setter Property="BorderBrush" Value="#B8C6D4" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,3" />
             <Setter Property="Height" Value="26" />
@@ -47,11 +47,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -63,7 +63,7 @@
             <Setter Property="Height" Value="26" />
             <Setter Property="Padding" Value="10,2" />
             <Setter Property="Background" Value="#F3F6FA" />
-            <Setter Property="BorderBrush" Value="#A8B7C6" />
+            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -76,7 +76,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#3399FF" />
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
                                 <Setter TargetName="Border" Property="Background" Value="#DCEEFF" />
@@ -87,16 +87,16 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Grid Margin="4" >
+    <Grid Margin="4,4,0,0" >
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="详情" FontWeight="Bold" Margin="4,0,4,6" />
+        <TextBlock Grid.Row="0" Text="详情" FontWeight="Bold" Margin="4,4,4,6" />
 
-        <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,8">
+        <Border Grid.Row="1" BorderBrush="{StaticResource ThemeBorderBrush}" Background="Transparent" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -119,10 +119,10 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Command="{Binding DeleteModCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="删除当前 Mod" FontSize="15" Foreground="#C62828" Background="Transparent" >
+                        <Button Grid.Row="0" Command="{Binding DeleteModCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="删除当前 Mod" FontSize="15" Foreground="{StaticResource ThemeAccentBrush}" Background="Transparent" >
                             <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/del.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Button>
-                        <Button Grid.Row="1" Command="{Binding OpenModFolderCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="打开Mod文件夹" FontSize="15" Foreground="#C62828" Background="Transparent">
+                        <Button Grid.Row="1" Command="{Binding OpenModFolderCommand}" Style="{StaticResource ImageButtonStyle}" ToolTip="打开Mod文件夹" FontSize="15" Foreground="{StaticResource ThemeAccentBrush}" Background="Transparent">
                             <svg:SvgViewbox Width="20" Height="20" Source="pack://siteoforigin:,,,/Resources/Icons/open.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Button>
                     </Grid>
@@ -172,7 +172,7 @@
                     <TextBox.Resources>
                         <Style TargetType="{x:Type Border}">
                             <Setter Property="CornerRadius" Value="4"/>
-                            <Setter Property="BorderBrush" Value="#c1d0dc"/>
+                            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}"/>
                             <Setter Property="BorderThickness" Value="0.5" />
                             <Setter Property="Background" Value="Transparent" />
                         </Style>
@@ -181,7 +181,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="5" Padding="8">
+        <Border Grid.Row="2" BorderBrush="{StaticResource ThemeBorderBrush}" Background="Transparent" BorderThickness="1" CornerRadius="5" Padding="4">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -190,7 +190,6 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0">
-                    <TextBlock Text="快捷键" VerticalAlignment="Center" Margin="8,0,4,0" />
                     <StackPanel Orientation="Horizontal" >
                         <ToggleButton IsChecked="{Binding ShowIniContent, Mode=TwoWay}"
                                       Width="34" Height="20" VerticalAlignment="Center"
@@ -201,13 +200,13 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="ToggleButton">
                                                 <Grid Width="34" Height="20">
-                                                    <Border x:Name="Track" Background="#A8A8A8" CornerRadius="10" />
+                                                    <Border x:Name="Track" Background="{StaticResource ThemeBorderBrush}" CornerRadius="10" />
                                                     <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" Margin="2"
                                                              HorizontalAlignment="Left" VerticalAlignment="Center" />
                                                 </Grid>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsChecked" Value="True">
-                                                        <Setter TargetName="Track" Property="Background" Value="#3399FF" />
+                                                        <Setter TargetName="Track" Property="Background" Value="{StaticResource ThemeAccentBrush}" />
                                                         <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
@@ -274,7 +273,7 @@
                         <TextBox.Resources>
                             <Style TargetType="{x:Type Border}">
                                 <Setter Property="CornerRadius" Value="4"/>
-                                <Setter Property="BorderBrush" Value="#c1d0dc"/>
+                                <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}"/>
                                 <Setter Property="BorderThickness" Value="0.5" />
                                 <Setter Property="Background" Value="Transparent" />
                             </Style>

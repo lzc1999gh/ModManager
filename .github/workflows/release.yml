@@ -1,0 +1,88 @@
+name: Release ModManager
+
+# 发版工作流：推送 v* 标签（如 v1.2.3）时自动打包并创建 GitHub Release。
+# 普通代码推送走 build.yml（纯 CI，不发布），本工作流不触发。
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '手动发版版本号（例如 1.2.3），将自动打 v1.2.3 标签并发布'
+        required: true
+        type: string
+
+# 创建 Release / 标签需要写权限
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+    # 1. 拉取代码（fetch-depth 0 以获取完整历史用于生成更新信息）
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # 2. 解析版本号与标签名
+    - name: Resolve version
+      id: version
+      shell: pwsh
+      run: |
+        if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+          $v = '${{ github.event.inputs.version }}'.Trim()
+          $tag = 'v' + $v
+        } else {
+          # 来自标签推送：ref_name 形如 v1.2.3
+          $tag = '${{ github.ref_name }}'
+          $v = $tag -replace '^v', ''
+        }
+        "version=$v" >> $env:GITHUB_OUTPUT
+        "tag=$tag" >> $env:GITHUB_OUTPUT
+
+    # 3. 设置 .NET SDK（与项目 TargetFramework=net10.0-windows 匹配）
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    # 4. 发布为独立应用（自带 .NET 运行时）
+    - name: Publish project
+      shell: pwsh
+      run: |
+        dotnet publish ./ModManager/ModManager.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -o ./publish/ModManager
+
+    # 5. 压缩发布目录为带版本号的 zip 包
+    - name: Package as zip
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./publish/ModManager/* `
+          -DestinationPath ./ModManager-${{ steps.version.outputs.version }}.zip
+
+    # 6. 上传构建产物（Actions 页面可下载）
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ModManager-${{ steps.version.outputs.version }}
+        path: ./publish/ModManager
+
+    # 7. 创建 GitHub Release（版本号取自标签，更新信息自动收集自上个标签以来的提交）
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: ModManager ${{ steps.version.outputs.version }}
+        body: |
+          ## 下载说明
+          - 下载下方附件 `ModManager-${{ steps.version.outputs.version }}.zip`，解压后运行 `ModManager.exe`
+          - 独立发布版本，无需安装 .NET 运行时
+        files: ./ModManager-${{ steps.version.outputs.version }}.zip
+        generate_release_notes: true

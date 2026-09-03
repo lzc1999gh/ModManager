@@ -1,18 +1,18 @@
-name: Build and Release ModManager
+name: CI Build ModManager
 
-# 触发工作流的事件
+# 仅推送/PR 时的持续集成：构建并上传 Artifact，不创建 Release。
+# 发版（带版本号与更新信息）请推送 v* 标签，见 release.yml。
+
 on:
   push:
-    branches: [ "master" ]   # 推送到 master 时自动打包并发布
-  workflow_dispatch:          # 允许从 GitHub Actions 页面手动触发
-
-# Release 需要写权限
-permissions:
-  contents: write
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
-  build-and-release:
-    runs-on: windows-latest   # WPF 项目需要在 Windows 环境上构建
+  build:
+    runs-on: windows-latest
 
     steps:
     # 1. 拉取代码
@@ -25,8 +25,9 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    # 3. 发布为独立应用（自带 .NET 运行时，输出到 ./publish/ModManager）
+    # 3. 发布为独立应用（自带 .NET 运行时）
     - name: Publish project
+      shell: pwsh
       run: |
         dotnet publish ./ModManager/ModManager.csproj `
           -c Release `
@@ -34,31 +35,9 @@ jobs:
           --self-contained true `
           -o ./publish/ModManager
 
-    # 4. 压缩发布目录为 zip 包（Release 附件）
-    - name: Package as zip
-      run: |
-        Compress-Archive -Path ./publish/ModManager/* -DestinationPath ./ModManager-win-x64.zip
-      shell: pwsh
-
-    # 5. 上传构建产物（Artifact，Actions 页面可下载）
+    # 4. 上传构建产物（Actions 页面可下载）
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ModManager-win-x64
         path: ./publish/ModManager
-
-    # 6. 创建 GitHub Release 并附加 zip 包
-    #    版本号使用 v1.0.<run_number>，每次推送自动递增
-    - name: Create release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v1.0.${{ github.run_number }}
-        name: ModManager v1.0.${{ github.run_number }}
-        body: |
-          自动构建发布（提交 ${{ github.sha }}）
-
-          ## 下载说明
-          - 下载下方附件 `ModManager-win-x64.zip`，解压后运行 `ModManager.exe`
-          - 独立发布版本，无需安装 .NET 运行时
-        files: ./ModManager-win-x64.zip
-        generate_release_notes: true
