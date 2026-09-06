@@ -28,6 +28,21 @@
 - .NET 10 SDK（构建项目需要）；
 - WPF 运行环境由 Windows 提供。
 
+依赖（开发 / 运行时）
+
+- SharpVectors 1.8.5
+- Ookii.Dialogs.Wpf 3.4.0
+
+开发与运行
+
+- 在 Visual Studio 中打开 ModManager.slnx，选择 ModManager 项目并运行（F5）或发布。
+- 使用 dotnet CLI：
+
+```powershell
+dotnet restore .\ModManager\ModManager.csproj
+dotnet run --project .\ModManager\ModManager.csproj -c Debug
+```
+
 本项目不是跨平台应用，不能在 Linux 或 macOS 上运行 WPF 主程序。
 
 ## 获取和构建
