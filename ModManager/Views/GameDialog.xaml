@@ -28,9 +28,9 @@
         <TextBox x:Name="ModsRootTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
         <Button Grid.Row="2" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseModsRoot_Click" />
 
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="角色头像目录：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="CharacterPicTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
-        <Button Grid.Row="3" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseCharacterPic_Click" />
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="游戏图标：" Margin="0,0,8,8" VerticalAlignment="Center" />
+        <TextBox x:Name="GameIconTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
+        <Button Grid.Row="3" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseGameIcon_Click" />
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="d3dx_user.ini（Persist）：" Margin="0,0,8,8" VerticalAlignment="Center" />
         <TextBox x:Name="D3dxUserIniTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,8,8" Padding="4" />

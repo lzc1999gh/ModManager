@@ -22,13 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Resources\CharacterPic\**\*.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Resources\CharacterInfo\**\*.json">
+    <Content Include="..\Data\**\*.*" LinkBase="Data">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

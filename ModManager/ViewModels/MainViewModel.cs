@@ -22,9 +22,6 @@ namespace ModManager.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private static readonly string StateDirectory = AppDataPaths.DataDirectory;
-        private static readonly string StateFile = Path.Combine(StateDirectory, "mod_manager_state.json");
-        private static readonly string LegacyStateFile = Path.Combine(StateDirectory, "modstate.json");
-        private static readonly string UserCharacterInfoDirectory = Path.Combine(StateDirectory, "CharacterInfo");
         private readonly GimiPersistService _gimiPersistService;
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<Character>> _charactersByGame = new(StringComparer.OrdinalIgnoreCase);
@@ -184,8 +181,6 @@ namespace ModManager.ViewModels
         // =========================================================
         public MainViewModel()
         {
-            // 在创建 Persist 服务前迁移旧版本配置，确保旧 Persist 文件也进入新的 Data 目录。
-            MigrateLegacyAppData();
             _gimiPersistService = new GimiPersistService();
             _addPlaceholder = new Character { Id = Guid.NewGuid().ToString(), Name = "", IsAddPlaceholder = true };
             _addGamePlaceholder = new Game
@@ -237,23 +232,7 @@ namespace ModManager.ViewModels
                 if (p is Game game) DeleteGame(game);
             }, p => p is Game game && !game.IsAddGamePlaceholder);
 
-            var resourceRoot = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterPic");
-            Games.Add(new Game
-            {
-                Id = "GI",
-                Name = "GI",
-                Path = Path.Combine(resourceRoot, "GI"),
-                CharacterInfoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", "GI.json")
-            });
-            Games.Add(new Game
-            {
-                Id = "WW",
-                Name = "WW",
-                Path = Path.Combine(resourceRoot, "WW"),
-                CharacterInfoPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", "WW.json")
-            });
-
-            MigrateLegacyStateFile();
+            LoadGamesFromData();
             LoadStateOrSample();
             foreach (var game in Games) EnsureGameIconPath(game);
             EnsureAddGamePlaceholder();
@@ -284,17 +263,129 @@ namespace ModManager.ViewModels
         private static string GetPackagedIconPath(string fileName) =>
             $"pack://siteoforigin:,,,/Resources/Icons/{fileName}";
 
+        private static string GetGameDirectory(Game game) =>
+            game == null ? string.Empty : AppDataPaths.GetGameDirectory(game.Id ?? game.Name);
+
+        private static string GetGameIconFilePath(Game game)
+        {
+            if (game == null) return string.Empty;
+            if (string.IsNullOrWhiteSpace(game.GameIconPath)) return string.Empty;
+            return AppDataPaths.ResolveGamePath(game.Id ?? game.Name, game.GameIconPath);
+        }
+
         private static void EnsureGameIconPath(Game game)
         {
             if (game == null || game.IsAddGamePlaceholder) return;
 
-            var gameId = game.Id?.Trim() ?? string.Empty;
-            var iconName = gameId.Equals("GI", StringComparison.OrdinalIgnoreCase)
-                ? "GI.svg"
-                : gameId.Equals("WW", StringComparison.OrdinalIgnoreCase)
-                    ? "WW.svg"
-                    : "mod.svg";
-            game.IconPath = GetPackagedIconPath(iconName);
+            var iconPath = GetGameIconFilePath(game);
+            game.IsVectorIcon = string.IsNullOrWhiteSpace(iconPath)
+                || string.Equals(Path.GetExtension(iconPath), ".svg", StringComparison.OrdinalIgnoreCase);
+            game.IconPath = !string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath)
+                ? iconPath
+                : GetPackagedIconPath("mod.svg");
+        }
+
+        private void LoadGamesFromData()
+        {
+            Games.Clear();
+            var gamesDirectory = AppDataPaths.GamesDirectory;
+            if (!Directory.Exists(gamesDirectory)) return;
+
+            foreach (var directory in Directory.EnumerateDirectories(gamesDirectory).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                var gameId = Path.GetFileName(directory);
+                var configPath = AppDataPaths.GetGameConfigFilePath(gameId);
+                if (!File.Exists(configPath)) continue;
+
+                try
+                {
+                    var game = JsonSerializer.Deserialize<Game>(File.ReadAllText(configPath));
+                    if (game == null || string.IsNullOrWhiteSpace(game.Id)) continue;
+                    game.CharacterInfoPath = string.IsNullOrWhiteSpace(game.CharacterInfoPath)
+                        ? AppDataPaths.GetDefaultCharacterInfoPath()
+                        : game.CharacterInfoPath;
+                    game.CharacterPicPath = string.IsNullOrWhiteSpace(game.CharacterPicPath)
+                        ? AppDataPaths.GetDefaultCharacterPicPath()
+                        : game.CharacterPicPath;
+                    game.GameIconPath ??= string.Empty;
+                    EnsureGameDataDirectories(game);
+                    EnsureGameIconPath(game);
+                    Games.Add(game);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[State] Failed to load game config '{configPath}': {ex}");
+                }
+            }
+        }
+
+        private static void EnsureGameDataDirectories(Game game)
+        {
+            if (game == null) return;
+            Directory.CreateDirectory(AppDataPaths.GetGameDirectory(game.Id ?? game.Name));
+            Directory.CreateDirectory(AppDataPaths.ResolveGamePath(
+                game.Id ?? game.Name, game.CharacterPicPath, AppDataPaths.GetDefaultCharacterPicPath()));
+            Directory.CreateDirectory(Path.Combine(
+                AppDataPaths.GetGameDirectory(game.Id ?? game.Name), "Persist"));
+        }
+
+        private static bool IsSupportedGameIcon(string path)
+        {
+            var extension = Path.GetExtension(path)?.ToLowerInvariant();
+            return extension is ".svg" or ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif";
+        }
+
+        private static bool SaveGameIcon(Game game, string sourcePath)
+        {
+            if (game == null) return false;
+            var gameDirectory = AppDataPaths.GetGameDirectory(game.Id ?? game.Name);
+            Directory.CreateDirectory(gameDirectory);
+
+            sourcePath = sourcePath?.Trim().Trim('"') ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                foreach (var oldIcon in Directory.EnumerateFiles(gameDirectory, "GameIcon.*"))
+                    File.Delete(oldIcon);
+                game.GameIconPath = string.Empty;
+                EnsureGameIconPath(game);
+                return true;
+            }
+
+            if (!File.Exists(sourcePath) || !IsSupportedGameIcon(sourcePath))
+                throw new IOException("游戏图标文件不存在或格式不受支持。");
+
+            var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+            var destination = Path.Combine(gameDirectory, "GameIcon" + extension);
+            if (!string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase))
+                File.Copy(sourcePath, destination, overwrite: true);
+
+            foreach (var oldIcon in Directory.EnumerateFiles(gameDirectory, "GameIcon.*")
+                .Where(path => !string.Equals(path, destination, StringComparison.OrdinalIgnoreCase)))
+            {
+                File.Delete(oldIcon);
+            }
+
+            game.GameIconPath = Path.GetRelativePath(gameDirectory, destination);
+            EnsureGameIconPath(game);
+            return true;
+        }
+
+        private static bool SaveGameConfiguration(Game game)
+        {
+            if (game == null || string.IsNullOrWhiteSpace(game.Id)) return false;
+            try
+            {
+                EnsureGameDataDirectories(game);
+                var configPath = AppDataPaths.GetGameConfigFilePath(game.Id);
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(configPath, JsonSerializer.Serialize(game, options));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[State] Failed to save game configuration: {ex}");
+                return false;
+            }
         }
 
         private static bool HasValidModsRoot(Game game) =>
@@ -400,42 +491,16 @@ namespace ModManager.ViewModels
 
         private string GetCharacterInfoPath(Game game)
         {
-            if (!string.IsNullOrWhiteSpace(game?.CharacterInfoPath)) return game.CharacterInfoPath;
-
-            var gameId = game?.Id;
-            if (string.IsNullOrWhiteSpace(gameId)) gameId = game?.Name;
-            if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
-            foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
-
-            var packagedPath = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo", gameId + ".json");
-            if (File.Exists(packagedPath))
-            {
-                game.CharacterInfoPath = packagedPath;
-                return packagedPath;
-            }
-
-            Directory.CreateDirectory(UserCharacterInfoDirectory);
-            game.CharacterInfoPath = Path.Combine(UserCharacterInfoDirectory, gameId + ".json");
-            return game.CharacterInfoPath;
+            if (game == null) return string.Empty;
+            game.CharacterInfoPath = string.IsNullOrWhiteSpace(game.CharacterInfoPath)
+                ? AppDataPaths.GetDefaultCharacterInfoPath()
+                : game.CharacterInfoPath;
+            return AppDataPaths.ResolveGamePath(game.Id ?? game.Name, game.CharacterInfoPath);
         }
 
         private string GetCharacterInfoWritePath(Game game)
         {
-            var infoPath = GetCharacterInfoPath(game);
-            var packagedDirectory = Path.Combine(AppContext.BaseDirectory, "Resources", "CharacterInfo");
-            var fullInfoPath = Path.GetFullPath(infoPath);
-            var fullPackagedDirectory = Path.GetFullPath(packagedDirectory) + Path.DirectorySeparatorChar;
-            if (!fullInfoPath.StartsWith(fullPackagedDirectory, StringComparison.OrdinalIgnoreCase)) return infoPath;
-
-            var gameId = game?.Id;
-            if (string.IsNullOrWhiteSpace(gameId)) gameId = game?.Name;
-            if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
-            foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
-            Directory.CreateDirectory(UserCharacterInfoDirectory);
-            var userPath = Path.Combine(UserCharacterInfoDirectory, gameId + ".json");
-            if (!File.Exists(userPath) && File.Exists(infoPath)) File.Copy(infoPath, userPath);
-            game.CharacterInfoPath = userPath;
-            return userPath;
+            return GetCharacterInfoPath(game);
         }
 
         private List<CharacterInfo> ReadCharacterInfoFile(Game game)
@@ -458,20 +523,7 @@ namespace ModManager.ViewModels
                 catch { }
             }
 
-            // 兼容旧版本：首次升级时从现有头像生成角色信息文件；之后列表不再依赖头像。
-            var generated = new List<CharacterInfo>();
-            if (!string.IsNullOrWhiteSpace(game?.Path) && Directory.Exists(game.Path))
-            {
-                foreach (var filePath in Directory.EnumerateFiles(game.Path)
-                    .Where(path => CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)))
-                {
-                    var name = Path.GetFileNameWithoutExtension(filePath);
-                    if (string.IsNullOrWhiteSpace(name) || generated.Any(info => string.Equals(info.Name, name, StringComparison.OrdinalIgnoreCase))) continue;
-                    generated.Add(new CharacterInfo { Id = Guid.NewGuid().ToString(), Name = name });
-                }
-            }
-            SaveCharacterInfoFile(game, generated, showError: false);
-            return generated;
+            return new List<CharacterInfo>();
         }
 
         private bool SaveCharacterInfoFile(Game game, IEnumerable<CharacterInfo> infos, bool showError = true)
@@ -506,28 +558,25 @@ namespace ModManager.ViewModels
 
         private string FindCharacterIcon(Game game, string characterName)
         {
-            if (string.IsNullOrWhiteSpace(game?.Path) || !Directory.Exists(game.Path)) return null;
+            var iconDirectory = GetCharacterIconDirectory(game);
+            if (string.IsNullOrWhiteSpace(iconDirectory) || !Directory.Exists(iconDirectory)) return null;
             foreach (var extension in CharacterImageExtensions)
             {
-                var path = Path.Combine(game.Path, characterName + extension);
+                var path = Path.Combine(iconDirectory, characterName + extension);
                 if (File.Exists(path)) return path;
             }
-            return Directory.EnumerateFiles(game.Path)
+            return Directory.EnumerateFiles(iconDirectory)
                 .FirstOrDefault(path => CharacterImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)
                     && string.Equals(Path.GetFileNameWithoutExtension(path), characterName, StringComparison.OrdinalIgnoreCase));
         }
 
         private string GetCharacterIconDirectory(Game game)
         {
-            if (game == null) return null;
-            if (string.IsNullOrWhiteSpace(game.Path))
-            {
-                var gameId = string.IsNullOrWhiteSpace(game.Id) ? game.Name : game.Id;
-                if (string.IsNullOrWhiteSpace(gameId)) gameId = "unknown";
-                foreach (var invalid in Path.GetInvalidFileNameChars()) gameId = gameId.Replace(invalid, '_');
-                game.Path = Path.Combine(StateDirectory, "CharacterPic", gameId);
-            }
-            return game.Path;
+            if (game == null) return string.Empty;
+            game.CharacterPicPath = string.IsNullOrWhiteSpace(game.CharacterPicPath)
+                ? AppDataPaths.GetDefaultCharacterPicPath()
+                : game.CharacterPicPath;
+            return AppDataPaths.ResolveGamePath(game.Id ?? game.Name, game.CharacterPicPath);
         }
 
         private List<Character> GetCachedCharacters(string gameId)
@@ -677,12 +726,25 @@ namespace ModManager.ViewModels
             {
                 Id = id,
                 Name = name,
-                Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
-                    ? Path.Combine(StateDirectory, "CharacterPic", id)
-                    : dialog.CharacterPicPath.Trim(),
+                CharacterInfoPath = AppDataPaths.GetDefaultCharacterInfoPath(),
+                CharacterPicPath = AppDataPaths.GetDefaultCharacterPicPath(),
+                GameIconPath = string.Empty,
                 ModsRootPath = dialog.ModsRootPath.Trim(),
                 D3dxUserIniPath = dialog.D3dxUserIniPath.Trim()
             };
+            try
+            {
+                EnsureGameDataDirectories(game);
+                if (!SaveGameIcon(game, dialog.GameIconPath)) return;
+                if (!File.Exists(GetCharacterInfoPath(game))
+                    && !SaveCharacterInfoFile(game, Array.Empty<CharacterInfo>())) return;
+                if (!SaveGameConfiguration(game)) return;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"创建游戏数据失败：{ex.Message}", "增加游戏", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             EnsureGameIconPath(game);
             MarkModsRootWarningShown(game);
             var addGameIndex = Games.IndexOf(_addGamePlaceholder);
@@ -730,6 +792,17 @@ namespace ModManager.ViewModels
             var isSelected = ReferenceEquals(game, SelectedGame);
             if (isSelected) SaveCurrentCharactersToCache();
 
+            var oldGameDirectory = AppDataPaths.GetGameDirectory(oldKey);
+            var newGameDirectory = AppDataPaths.GetGameDirectory(newKey);
+            var movedGameDirectory = false;
+            if (!string.Equals(oldKey, newKey, StringComparison.OrdinalIgnoreCase)
+                && Directory.Exists(newGameDirectory))
+            {
+                MessageBox.Show("目标游戏 ID 的数据目录已经存在。", "修改游戏", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var iconSourcePath = dialog.GameIconPath?.Trim().Trim('"') ?? string.Empty;
             _charactersByGame.TryGetValue(oldKey, out var cachedCharacters);
             if (!string.Equals(oldKey, newKey, StringComparison.OrdinalIgnoreCase))
             {
@@ -737,16 +810,46 @@ namespace ModManager.ViewModels
                 if (cachedCharacters != null) _charactersByGame[newKey] = cachedCharacters;
             }
 
-            game.Id = id;
-            game.Name = name;
-            game.ModsRootPath = dialog.ModsRootPath.Trim();
-            game.Path = string.IsNullOrWhiteSpace(dialog.CharacterPicPath)
-                ? Path.Combine(StateDirectory, "CharacterPic", id)
-                : dialog.CharacterPicPath.Trim();
-            game.D3dxUserIniPath = dialog.D3dxUserIniPath.Trim();
-            EnsureGameIconPath(game);
+            try
+            {
+                if (!string.Equals(oldKey, newKey, StringComparison.OrdinalIgnoreCase)
+                    && Directory.Exists(oldGameDirectory))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(newGameDirectory));
+                    Directory.Move(oldGameDirectory, newGameDirectory);
+                    movedGameDirectory = true;
+                }
+
+                if (movedGameDirectory && Path.IsPathRooted(iconSourcePath)
+                    && iconSourcePath.StartsWith(oldGameDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    iconSourcePath = Path.Combine(newGameDirectory, Path.GetRelativePath(oldGameDirectory, iconSourcePath));
+                }
+
+                game.Id = id;
+                game.Name = name;
+                game.ModsRootPath = dialog.ModsRootPath.Trim();
+                game.CharacterInfoPath = string.IsNullOrWhiteSpace(game.CharacterInfoPath)
+                    ? AppDataPaths.GetDefaultCharacterInfoPath()
+                    : game.CharacterInfoPath;
+                game.CharacterPicPath = string.IsNullOrWhiteSpace(game.CharacterPicPath)
+                    ? AppDataPaths.GetDefaultCharacterPicPath()
+                    : game.CharacterPicPath;
+                game.D3dxUserIniPath = dialog.D3dxUserIniPath.Trim();
+                EnsureGameDataDirectories(game);
+                if (!SaveGameIcon(game, iconSourcePath)) throw new IOException("游戏图标保存失败。");
+                EnsureGameIconPath(game);
+            }
+            catch (Exception ex)
+            {
+                if (movedGameDirectory && Directory.Exists(newGameDirectory))
+                {
+                    try { Directory.Move(newGameDirectory, oldGameDirectory); } catch { }
+                }
+                MessageBox.Show($"修改游戏失败：{ex.Message}", "修改游戏", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
             MarkModsRootWarningShown(game);
-            _gimiPersistService.MoveGamePersistState(oldKey, newKey);
 
             if (cachedCharacters != null)
             {
@@ -786,7 +889,8 @@ namespace ModManager.ViewModels
             if (isSelected) SaveCurrentCharactersToCache();
             _charactersByGame.Remove(game.Id ?? game.Name ?? string.Empty);
             _gimiPersistService.RemoveGamePersistState(game);
-            DeleteUserCharacterInfoFile(game);
+            var gameDirectory = AppDataPaths.GetGameDirectory(game.Id ?? game.Name);
+            if (Directory.Exists(gameDirectory)) Directory.Delete(gameDirectory, recursive: true);
 
             var nextGame = Games.FirstOrDefault(item =>
                 !item.IsAddGamePlaceholder && !ReferenceEquals(item, game));
@@ -802,24 +906,6 @@ namespace ModManager.ViewModels
             }
 
             SaveState();
-        }
-
-        private static void DeleteUserCharacterInfoFile(Game game)
-        {
-            if (game == null || string.IsNullOrWhiteSpace(game.CharacterInfoPath)) return;
-
-            try
-            {
-                var userDirectory = Path.GetFullPath(UserCharacterInfoDirectory).TrimEnd(Path.DirectorySeparatorChar)
-                    + Path.DirectorySeparatorChar;
-                var infoPath = Path.GetFullPath(game.CharacterInfoPath);
-                if (infoPath.StartsWith(userDirectory, StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(infoPath))
-                {
-                    File.Delete(infoPath);
-                }
-            }
-            catch { }
         }
 
         // =========================================================
@@ -854,9 +940,10 @@ namespace ModManager.ViewModels
             var oldCharacterDir = string.IsNullOrWhiteSpace(modsRoot) ? null : Path.Combine(modsRoot, oldName);
             var newCharacterDir = string.IsNullOrWhiteSpace(modsRoot) ? null : Path.Combine(modsRoot, requestedName);
             var oldIcon = FindCharacterIcon(SelectedGame, oldName);
-            var newIcon = string.IsNullOrWhiteSpace(oldIcon) || string.IsNullOrWhiteSpace(SelectedGame.Path)
+            var iconDirectory = GetCharacterIconDirectory(SelectedGame);
+            var newIcon = string.IsNullOrWhiteSpace(oldIcon) || string.IsNullOrWhiteSpace(iconDirectory)
                 ? null
-                : Path.Combine(SelectedGame.Path, requestedName + Path.GetExtension(oldIcon));
+                : Path.Combine(iconDirectory, requestedName + Path.GetExtension(oldIcon));
 
             if (!string.IsNullOrWhiteSpace(newCharacterDir)
                 && (Directory.Exists(newCharacterDir) || File.Exists(newCharacterDir)))
@@ -1115,124 +1202,40 @@ namespace ModManager.ViewModels
         // =========================================================
         // Load State
         // =========================================================
-        private static void MigrateLegacyStateFile()
-        {
-            try
-            {
-                if (!File.Exists(StateFile) && File.Exists(LegacyStateFile))
-                    File.Move(LegacyStateFile, StateFile);
-                else if (File.Exists(StateFile) && File.Exists(LegacyStateFile))
-                    File.Delete(LegacyStateFile);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[State] Failed to migrate legacy state file: {ex}");
-            }
-        }
-
-        private static void MigrateLegacyAppData()
-        {
-            var legacyDirectory = AppDataPaths.LegacyDataDirectory;
-            var currentDirectory = AppDataPaths.DataDirectory;
-
-            try
-            {
-                var fullLegacyDirectory = Path.GetFullPath(legacyDirectory)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                var fullCurrentDirectory = Path.GetFullPath(currentDirectory)
-                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                if (string.Equals(fullLegacyDirectory, fullCurrentDirectory, StringComparison.OrdinalIgnoreCase)
-                    || !Directory.Exists(fullLegacyDirectory))
-                {
-                    return;
-                }
-
-                Directory.CreateDirectory(fullCurrentDirectory);
-
-                // 目标目录中的文件优先，旧目录只补充不存在的配置。
-                CopyMissingDirectoryContents(fullLegacyDirectory, fullCurrentDirectory);
-
-                // 只有全部内容复制成功后才删除旧配置目录。
-                Directory.Delete(fullLegacyDirectory, recursive: true);
-                Debug.WriteLine($"[State] Migrated and removed legacy app data: {fullLegacyDirectory}");
-            }
-            catch (Exception ex)
-            {
-                // 迁移失败时保留旧目录，避免因权限或磁盘问题造成配置丢失。
-                Debug.WriteLine($"[State] Failed to migrate legacy app data: {ex}");
-            }
-        }
-
-        private static void CopyMissingDirectoryContents(string sourceDirectory, string destinationDirectory)
-        {
-            Directory.CreateDirectory(destinationDirectory);
-
-            foreach (var sourceFile in Directory.EnumerateFiles(sourceDirectory))
-            {
-                var destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(sourceFile));
-                if (!File.Exists(destinationFile)) File.Copy(sourceFile, destinationFile);
-            }
-
-            foreach (var sourceSubdirectory in Directory.EnumerateDirectories(sourceDirectory))
-            {
-                var destinationSubdirectory = Path.Combine(
-                    destinationDirectory, Path.GetFileName(sourceSubdirectory));
-                CopyMissingDirectoryContents(sourceSubdirectory, destinationSubdirectory);
-            }
-        }
-
         private void LoadStateOrSample()
         {
-            if (File.Exists(StateFile))
+            foreach (var game in Games)
             {
+                var stateFile = AppDataPaths.GetGameStateFilePath(game.Id ?? game.Name);
+                if (!File.Exists(stateFile)) continue;
+
                 try
                 {
-                    var json = File.ReadAllText(StateFile);
-                    var doc = JsonSerializer.Deserialize<StateSnapshot>(json);
-                    if (doc != null)
+                    var snapshot = JsonSerializer.Deserialize<GameStateSnapshot>(File.ReadAllText(stateFile));
+                    var savedCharacters = snapshot?.Characters ?? Array.Empty<Character>();
+                    var gameKey = game.Id ?? game.Name ?? string.Empty;
+                    var characters = new List<Character>();
+                    foreach (var savedCharacter in savedCharacters)
                     {
-                        // 恢复每个 Mod 的来源信息（按路径建立映射）
-                        foreach (var savedMod in doc.Characters?
-                            .Where(character => character.Mods != null)
-                            .SelectMany(character => character.Mods)
-                            .Where(mod => !string.IsNullOrWhiteSpace(mod.FilePath)))
+                        savedCharacter.Id ??= Guid.NewGuid().ToString();
+                        savedCharacter.Mods ??= new ObservableCollection<Mod>();
+                        savedCharacter.GameId = game.Id;
+                        characters.Add(savedCharacter);
+                        foreach (var savedMod in savedCharacter.Mods)
                         {
-                            _sourcesByModPath[savedMod.FilePath] = savedMod.Source;
+                            if (!string.IsNullOrWhiteSpace(savedMod.FilePath))
+                                _sourcesByModPath[savedMod.FilePath] = savedMod.Source;
                         }
-                        var savedGames = (doc.Games ?? Array.Empty<Game>()).ToArray();
-                        if (savedGames.Length > 0)
-                        {
-                            Games.Clear();
-                            foreach (var savedGame in savedGames) Games.Add(savedGame);
-                        }
-
-                        _charactersByGame.Clear();
-                        var legacyGameId = Games.FirstOrDefault()?.Id ?? Games.FirstOrDefault()?.Name ?? string.Empty;
-                        foreach (var savedCharacter in doc.Characters ?? Array.Empty<Character>())
-                        {
-                            savedCharacter.Id ??= Guid.NewGuid().ToString();
-                            savedCharacter.Mods ??= new ObservableCollection<Mod>();
-                            var gameId = string.IsNullOrWhiteSpace(savedCharacter.GameId) ? legacyGameId : savedCharacter.GameId;
-                            savedCharacter.GameId = gameId;
-                            if (!_charactersByGame.TryGetValue(gameId, out var characters))
-                            {
-                                characters = new List<Character>();
-                                _charactersByGame[gameId] = characters;
-                            }
-                            characters.Add(savedCharacter);
-                        }
-
-                        SelectedGame = Games.FirstOrDefault();
-                        return;
                     }
+                    _charactersByGame[gameKey] = characters;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[State] Failed to load game state '{stateFile}': {ex}");
+                }
             }
 
-            // 首次运行直接使用内置游戏和角色信息文件，不再创建依赖头像的示例角色。
             SelectedGame = Games.FirstOrDefault();
-            SaveState();
         }
 
         // =========================================================
@@ -1853,19 +1856,19 @@ namespace ModManager.ViewModels
             {
                 Directory.CreateDirectory(StateDirectory);
                 SaveCurrentCharactersToCache();
-                // 序列化时排除占位项，避免把“新增角色”按钮持久化到状态文件
-                var allCharacters = _charactersByGame.Values
-                    .SelectMany(characters => characters)
-                    .Where(character => !character.IsAddPlaceholder)
-                    .GroupBy(character => $"{character.GameId}\u0000{character.Id}", StringComparer.OrdinalIgnoreCase)
-                    .Select(group => group.First())
-                    .ToArray();
-                var savedGames = Games
-                    .Where(game => !game.IsAddGamePlaceholder)
-                    .ToArray();
-                var snapshot = new StateSnapshot { Games = savedGames, Characters = allCharacters };
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(StateFile, JsonSerializer.Serialize(snapshot, options));
+                foreach (var game in Games.Where(game => !game.IsAddGamePlaceholder))
+                {
+                    SaveGameConfiguration(game);
+                    var gameKey = game.Id ?? game.Name ?? string.Empty;
+                    var characters = _charactersByGame.TryGetValue(gameKey, out var cached)
+                        ? cached.Where(character => !character.IsAddPlaceholder).ToArray()
+                        : Array.Empty<Character>();
+                    var snapshot = new GameStateSnapshot { Characters = characters };
+                    var stateFile = AppDataPaths.GetGameStateFilePath(gameKey);
+                    Directory.CreateDirectory(Path.GetDirectoryName(stateFile));
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    File.WriteAllText(stateFile, JsonSerializer.Serialize(snapshot, options));
+                }
             }
             catch { }
         }
@@ -1882,9 +1885,8 @@ namespace ModManager.ViewModels
         // =========================================================
         // State Snapshot
         // =========================================================
-        private class StateSnapshot
+        private class GameStateSnapshot
         {
-            public Game[] Games { get; set; }
             public Character[] Characters { get; set; }
         }
     }

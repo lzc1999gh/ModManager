@@ -22,19 +22,12 @@ namespace ModManager.Services
     ///
     /// d3dx_user.ini 只保存当前生效 Mod 的运行时值；
     /// 本服务在切换前读取当前值，并把每个游戏的 Mod 历史快照保存到
-    /// 程序目录下 Data\PersistStates\game_&lt;游戏 ID&gt;.json。
+    /// Data\Games\&lt;游戏 ID&gt;\Persist\snapshots.json。
     ///
     /// 快捷键 [Key...] key= 不属于本服务的处理范围。
     /// </summary>
     public class GimiPersistService
     {
-        private static readonly string StateDirectory = AppDataPaths.DataDirectory;
-
-        private static readonly string PersistStateDirectory = Path.Combine(StateDirectory, "PersistStates");
-        private static readonly string CombinedPersistStateFile = Path.Combine(StateDirectory, "mod_persist_snapshots.json");
-        private static readonly string LegacyPersistStateFile = Path.Combine(StateDirectory, "gimi-persist.json");
-        private const string LegacyGameKey = "__legacy__";
-
         // 已加载游戏 ID -> 规范化 Mod 路径 -> ini相对路径\变量名 -> 值。
         // 每个游戏只会读写自己的状态文件，缓存仅避免同一次运行中的重复磁盘读取。
         private readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> _persistStates =
@@ -49,11 +42,6 @@ namespace ModManager.Services
             public bool FileAvailable { get; init; }
             public Dictionary<string, string> Values { get; init; } =
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        }
-
-        public GimiPersistService()
-        {
-            MigrateLegacyPersistStateFiles();
         }
 
         /// <summary>
@@ -97,13 +85,6 @@ namespace ModManager.Services
 
             foreach (var pair in read.Values)
                 modStates[pair.Key] = pair.Value;
-
-            // 旧版本状态没有游戏维度。成功从当前游戏读取到值后，清理同一 Mod 的旧兼容记录。
-            var legacyStates = GetOrLoadGameStates(LegacyGameKey);
-            if (legacyStates.Remove(modPath))
-            {
-                SaveGameStates(LegacyGameKey);
-            }
 
             SaveGameStates(gameKey);
             Debug.WriteLine($"[GIMI Persist] Saved {read.Values.Count} values for {game.Name}/{mod.Name}.");
@@ -183,12 +164,6 @@ namespace ModManager.Services
                 SaveGameStates(gameKey);
             }
 
-            var legacyStates = GetOrLoadGameStates(LegacyGameKey);
-            if (legacyStates.Remove(modPath))
-            {
-                SaveGameStates(LegacyGameKey);
-            }
-
             Debug.WriteLine($"[GIMI Persist] Removed snapshot for {game.Name}/{modPath}.");
         }
 
@@ -206,13 +181,9 @@ namespace ModManager.Services
 
             var gameKey = GetGameKey(game);
             var gameStates = GetOrLoadGameStates(gameKey);
-            var legacyStates = GetOrLoadGameStates(LegacyGameKey);
             if (!gameStates.TryGetValue(oldPath, out var oldState))
             {
-                // 兼容旧版本的无游戏维度状态。
-                if (!legacyStates.TryGetValue(oldPath, out oldState)) return;
-
-                gameStates[oldPath] = new Dictionary<string, string>(oldState, StringComparer.OrdinalIgnoreCase);
+                return;
             }
 
             if (!gameStates.TryGetValue(newPath, out var newState))
@@ -223,11 +194,6 @@ namespace ModManager.Services
 
             foreach (var pair in oldState) newState[pair.Key] = pair.Value;
             gameStates.Remove(oldPath);
-
-            if (legacyStates.Remove(oldPath))
-            {
-                SaveGameStates(LegacyGameKey);
-            }
 
             SaveGameStates(gameKey);
             Debug.WriteLine($"[GIMI Persist] State moved: {oldPath} -> {newPath}.");
@@ -417,7 +383,7 @@ namespace ModManager.Services
             if (_persistStates.TryGetValue(gameKey, out var states)) return states;
 
             states = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-            var stateFile = GetGameStateFilePath(gameKey);
+            var stateFile = AppDataPaths.GetPersistStateFilePath(gameKey);
             if (File.Exists(stateFile))
             {
                 try
@@ -442,12 +408,6 @@ namespace ModManager.Services
             if (gameStates.TryGetValue(modPath, out var values))
             {
                 return new Dictionary<string, string>(values, StringComparer.OrdinalIgnoreCase);
-            }
-
-            var legacyStates = GetOrLoadGameStates(LegacyGameKey);
-            if (legacyStates.TryGetValue(modPath, out var legacyValues))
-            {
-                return new Dictionary<string, string>(legacyValues, StringComparer.OrdinalIgnoreCase);
             }
 
             return null;
@@ -479,7 +439,7 @@ namespace ModManager.Services
                 catch { }
             }
 
-            // 兼容旧状态：从实际路径中定位 Mods，并只处理最后一个组件的 DISABLED_。
+            // 从实际路径中定位 Mods，并只处理最后一个组件的 DISABLED_。
             var markerIndex = path.IndexOf(@"\mods\", StringComparison.OrdinalIgnoreCase);
             if (markerIndex >= 0)
             {
@@ -589,105 +549,15 @@ namespace ModManager.Services
         }
 
         // =========================================================
-        // Per-game state files and legacy migration
+        // Per-game state file
         // =========================================================
-
-        private void MigrateLegacyPersistStateFiles()
-        {
-            try
-            {
-                Directory.CreateDirectory(PersistStateDirectory);
-                MigrateCombinedPersistStateFile();
-                MigrateLegacyFlatPersistStateFile();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GIMI Persist] Failed to prepare per-game state files: {ex}");
-            }
-        }
-
-        private void MigrateCombinedPersistStateFile()
-        {
-            if (!File.Exists(CombinedPersistStateFile)) return;
-
-            try
-            {
-                var json = File.ReadAllText(CombinedPersistStateFile);
-                try
-                {
-                    var nested = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, Dictionary<string, string>>>>(json);
-                    if (nested != null)
-                    {
-                        var migrated = true;
-                        foreach (var game in nested)
-                        {
-                            var gameStates = GetOrLoadGameStates(game.Key);
-                            // 新架构已存在的数据优先，避免升级后旧合并文件覆盖新写入的快照。
-                            MergeGameStates(gameStates, game.Value, overwriteExisting: false);
-                            migrated &= SaveGameStates(game.Key);
-                        }
-                        if (!migrated) return;
-                        File.Delete(CombinedPersistStateFile);
-                        Debug.WriteLine("[GIMI Persist] Migrated combined state file to per-game files.");
-                        return;
-                    }
-                }
-                catch (JsonException) { }
-
-                // 兼容最早版本：{ modPath: { ini\variable: value } }
-                var legacy = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
-                if (legacy != null)
-                {
-                    var legacyStates = GetOrLoadGameStates(LegacyGameKey);
-                    MergeGameStates(legacyStates, legacy, overwriteExisting: false);
-                    if (!SaveGameStates(LegacyGameKey)) return;
-                    File.Delete(CombinedPersistStateFile);
-                    Debug.WriteLine("[GIMI Persist] Migrated legacy combined state to the compatibility file.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GIMI Persist] Failed to migrate '{CombinedPersistStateFile}': {ex}");
-            }
-        }
-
-        private void MigrateLegacyFlatPersistStateFile()
-        {
-            if (!File.Exists(LegacyPersistStateFile)) return;
-
-            try
-            {
-                var legacy = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(
-                    File.ReadAllText(LegacyPersistStateFile));
-                if (legacy == null) return;
-
-                var legacyStates = GetOrLoadGameStates(LegacyGameKey);
-                MergeGameStates(legacyStates, legacy, overwriteExisting: false);
-                if (!SaveGameStates(LegacyGameKey)) return;
-                File.Delete(LegacyPersistStateFile);
-                Debug.WriteLine("[GIMI Persist] Migrated gimi-persist.json to the compatibility file.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[GIMI Persist] Failed to migrate '{LegacyPersistStateFile}': {ex}");
-            }
-        }
-
-        private static string GetGameStateFilePath(string gameKey)
-        {
-            var safeKey = NormalizeGameKey(gameKey);
-            foreach (var invalid in Path.GetInvalidFileNameChars()) safeKey = safeKey.Replace(invalid, '_');
-            safeKey = safeKey.Trim().TrimEnd('.');
-            if (string.IsNullOrWhiteSpace(safeKey)) safeKey = "default";
-            return Path.Combine(PersistStateDirectory, "game_" + safeKey + ".json");
-        }
 
         private bool SaveGameStates(string gameKey)
         {
             gameKey = NormalizeGameKey(gameKey);
             if (!_persistStates.TryGetValue(gameKey, out var states)) return true;
 
-            var stateFile = GetGameStateFilePath(gameKey);
+            var stateFile = AppDataPaths.GetPersistStateFilePath(gameKey);
             try
             {
                 if (states.Count == 0)
@@ -696,7 +566,7 @@ namespace ModManager.Services
                     return true;
                 }
 
-                Directory.CreateDirectory(PersistStateDirectory);
+                Directory.CreateDirectory(Path.GetDirectoryName(stateFile));
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 File.WriteAllText(stateFile, JsonSerializer.Serialize(states, options));
                 return true;
@@ -712,7 +582,7 @@ namespace ModManager.Services
         {
             try
             {
-                var stateFile = GetGameStateFilePath(gameKey);
+                var stateFile = AppDataPaths.GetPersistStateFilePath(gameKey);
                 if (File.Exists(stateFile)) File.Delete(stateFile);
             }
             catch (Exception ex)

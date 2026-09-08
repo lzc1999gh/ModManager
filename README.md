@@ -8,8 +8,7 @@
 
 - 支持多个游戏，每个游戏可以单独配置：
   - Mods 根目录；
-  - 角色头像目录；
-  - 角色信息 JSON 文件；
+  - 游戏图标；
   - `d3dx_user.ini` 文件路径。
 - 角色列表来自角色信息文件，不依赖头像文件是否存在。
 - 角色可以没有头像；可以通过角色图像区域的右键菜单添加或修改头像，头像会复制到对应的 `CharacterPic` 目录并按角色名保存。
@@ -66,23 +65,23 @@ dotnet publish .\ModManager\ModManager.csproj `
   -o .\publish\ModManager
 ```
 
-发布目录中的文件需要保持原有目录结构，尤其是 `Resources` 目录不能单独移除。
+发布目录中的文件需要保持原有目录结构，尤其是 `Data` 和 `Resources` 目录不能单独移除。
 
 ## 使用方法
 
 ### 1. 配置游戏
 
-从顶部游戏下拉菜单中选择已有游戏，或选择最后的“增加游戏”选项。新增游戏时填写：
+从左侧游戏栏选择已有游戏，或选择最后的“增加游戏”图标。新增游戏时填写：
 
 | 配置项 | 说明 |
 | --- | --- |
 | 游戏 ID | 用于区分游戏和保存游戏状态，建议使用稳定且唯一的短名称。 |
 | 游戏名称 | 在界面中显示的名称。 |
+| 游戏图标 | 可选。支持 SVG、PNG、JPG、JPEG、BMP、GIF；程序会复制到该游戏的数据目录并保存为 `GameIcon.*`。 |
 | Mod 根目录 | 必填。该游戏的 Mods 根目录，角色目录应直接位于此目录下；未设置或目录不可访问时，Mod 列表、导入和启用/禁用功能不可用。 |
-| 角色头像目录 | 可选。头像文件放置目录；留空时使用软件目录下的 `Data\CharacterPic`。 |
 | `d3dx_user.ini` | 用于读取当前生效 Mod 的 persist 状态；留空时会尝试根据 Mods 根目录推断。仅在含 `global persist` 的 Mod 保存状态且无法定位该文件时提示。 |
 
-下拉菜单中的游戏可以修改或删除。删除游戏只删除管理器保存的游戏配置、角色信息和 persist 快照，不会删除磁盘上的 Mods 文件。
+游戏图标的右键菜单可以修改或删除游戏。删除游戏只删除管理器保存的游戏配置、角色信息和 persist 快照，不会删除磁盘上的 Mods 文件。
 
 ### 2. 目录结构
 
@@ -145,12 +144,13 @@ global persist $example = 0
 
 | 文件或目录 | 内容 |
 | --- | --- |
-| `Data\mod_manager_state.json` | 游戏配置、角色状态、Mod 来源等管理器界面状态。 |
-| `Data\PersistStates\game_<游戏ID>.json` | 每个游戏独立保存的 `global persist` 历史快照。 |
-| `Data\CharacterInfo\<游戏ID>.json` | 用户可修改的角色信息文件。首次修改内置角色列表时会从内置文件复制到这里。 |
-| `Data\CharacterPic\<游戏ID>\` | 未指定头像目录时使用的用户头像目录。 |
+| `Data\Games\<游戏ID>\game.json` | 游戏名称、Mods 根目录、游戏图标和 `d3dx_user.ini` 路径。 |
+| `Data\Games\<游戏ID>\CharacterInfo.json` | 当前游戏的角色列表；内置角色信息也直接存放在这里，可由用户修改。 |
+| `Data\Games\<游戏ID>\CharacterPic\` | 当前游戏的角色头像；头像可以为空，右键角色图像区域可添加或修改。 |
+| `Data\Games\<游戏ID>\state.json` | 当前游戏的角色、Mod 来源和预览图等管理器状态。 |
+| `Data\Games\<游戏ID>\Persist\snapshots.json` | 当前游戏独立保存的 `global persist` 历史快照。 |
 
-旧版本位于 `%LocalAppData%\ModManager` 的配置会在首次启动时迁移到软件目录下的 `Data` 文件夹，并在迁移成功后删除旧配置。旧版的 `modstate.json`、`gimi-persist.json` 和合并的 `mod_persist_snapshots.json` 也会自动迁移；迁移成功后会按游戏写入 `Data\PersistStates` 目录。
+内置的 GI 和 WW 也只是预先放入 `Data\Games` 的用户配置，不再从 `Resources\CharacterInfo` 或 `Resources\CharacterPic` 读取。删除游戏时会删除该游戏的数据目录，但不会删除 Mods 根目录中的文件。
 
 ## 项目结构
 
@@ -162,8 +162,9 @@ ModManager/
 │  ├─ Services/        persist 状态等服务
 │  ├─ ViewModels/      界面逻辑和命令
 │  ├─ Views/           WPF 用户控件和对话框
-│  ├─ Resources/       图标、角色信息和内置头像
+│  ├─ Resources/       程序图标和界面资源
 │  └─ ModManager.csproj
+├─ Data/Games/         内置及用户游戏数据
 ├─ .github/workflows/  GitHub Actions 构建配置
 └─ README.md
 ```

@@ -5,6 +5,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:ModManager.Views"
+        xmlns:conv="clr-namespace:ModManager.Converters"
         xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
         mc:Ignorable="d"
         Title="ModManager" Height="600" Width="1100"
@@ -74,6 +75,8 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
     </Window.Resources>
 
     <Grid>
@@ -140,8 +143,24 @@
                                     </MenuItem>
                                 </ContextMenu>
                             </Border.ContextMenu>
-                                    <svg:SvgViewbox Width="42" Height="42" Source="{Binding IconPath}"
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform" />
+                                    <Grid Width="42" Height="42">
+                                        <svg:SvgViewbox Width="42" Height="42" Source="{Binding IconPath}"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform"
+                                                        Visibility="{Binding IsVectorIcon, Converter={StaticResource BoolToVisibility}}" />
+                                        <Image Width="42" Height="42" Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Uniform">
+                                            <Image.Style>
+                                                <Style TargetType="Image">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsVectorIcon}" Value="False">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -157,13 +176,13 @@
             </Grid.RowDefinitions>
 
             <!-- 顶部信息栏 -->
-            <Border Grid.Row="0" Background="#FF2B2B2B"
+            <Border Grid.Row="0" Background="#810000"
                     BorderBrush="{StaticResource ThemeAccentBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,6">
                 <StackPanel Orientation="Horizontal" Margin="10,8">
                     <TextBlock Text="{Binding SelectedGame.Name, StringFormat=游戏：{0}}"
-                               FontWeight="Bold" VerticalAlignment="Center" Foreground="White" />
-                    <TextBlock Text="    Mods 根目录：" VerticalAlignment="Center" Margin="14,0,6,0"
-                               Foreground="White" />
+                               FontWeight="Bold" VerticalAlignment="Center" Foreground="Black" />
+                    <TextBlock Text="    Mods 根目录：" VerticalAlignment="Center" Margin="14,0,6,0" FontWeight="Bold"
+                               Foreground="Black" />
                     <Grid Width="420" Height="28">
                         <Border Background="#FFFFFF" BorderBrush="{StaticResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="14" />
                         <TextBlock Text="{Binding SelectedGame.ModsRootPath}"

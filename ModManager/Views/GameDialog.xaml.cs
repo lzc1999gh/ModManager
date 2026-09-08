@@ -9,7 +9,7 @@ namespace ModManager.Views
         public string GameId => GameIdTextBox.Text?.Trim() ?? string.Empty;
         public string GameName => GameNameTextBox.Text?.Trim() ?? string.Empty;
         public string ModsRootPath => ModsRootTextBox.Text?.Trim() ?? string.Empty;
-        public string CharacterPicPath => CharacterPicTextBox.Text?.Trim() ?? string.Empty;
+        public string GameIconPath => GameIconTextBox.Text?.Trim() ?? string.Empty;
         public string D3dxUserIniPath => D3dxUserIniTextBox.Text?.Trim() ?? string.Empty;
 
         public GameDialog()
@@ -24,7 +24,10 @@ namespace ModManager.Views
             GameIdTextBox.Text = game?.Id ?? string.Empty;
             GameNameTextBox.Text = game?.Name ?? string.Empty;
             ModsRootTextBox.Text = game?.ModsRootPath ?? string.Empty;
-            CharacterPicTextBox.Text = game?.Path ?? string.Empty;
+            GameIconTextBox.Text = game != null && !string.IsNullOrWhiteSpace(game.IconPath)
+                && !game.IconPath.StartsWith("pack://", System.StringComparison.OrdinalIgnoreCase)
+                ? game.IconPath
+                : string.Empty;
             D3dxUserIniTextBox.Text = game?.D3dxUserIniPath ?? string.Empty;
         }
 
@@ -38,14 +41,16 @@ namespace ModManager.Views
             if (dialog.ShowDialog(this) == true) ModsRootTextBox.Text = dialog.SelectedPath;
         }
 
-        private void BrowseCharacterPic_Click(object sender, RoutedEventArgs e)
+        private void BrowseGameIcon_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new VistaFolderBrowserDialog
+            var dialog = new OpenFileDialog
             {
-                Description = "请选择角色头像目录（可以留空）",
-                UseDescriptionForTitle = true
+                Title = "请选择游戏图标（可以留空）",
+                Filter = "图标文件|*.svg;*.png;*.jpg;*.jpeg;*.bmp;*.gif|所有文件|*.*",
+                CheckFileExists = true,
+                CheckPathExists = true
             };
-            if (dialog.ShowDialog(this) == true) CharacterPicTextBox.Text = dialog.SelectedPath;
+            if (dialog.ShowDialog(this) == true) GameIconTextBox.Text = dialog.FileName;
         }
 
         private void BrowseD3dxUserIni_Click(object sender, RoutedEventArgs e)

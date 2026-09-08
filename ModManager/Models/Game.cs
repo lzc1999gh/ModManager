@@ -4,11 +4,13 @@ namespace ModManager.Models
     {
         private string _id;
         private string _name;
-        private string _path;
-        private string _characterInfoPath;
+        private string _characterPicPath = "CharacterPic";
+        private string _characterInfoPath = "CharacterInfo.json";
+        private string _gameIconPath = "GameIcon.svg";
         private string _modsRootPath;
         private string _d3dxUserIniPath;
         private string _iconPath = string.Empty;
+        private bool _isVectorIcon = true;
 
         public string Id
         {
@@ -32,19 +34,19 @@ namespace ModManager.Models
             }
         }
 
-        // 保留旧版 Path 字段，当前语义是角色头像目录。
-        public string Path
+        // 角色头像目录。应用内目录保存相对路径，外部目录可保存绝对路径。
+        public string CharacterPicPath
         {
-            get => _path;
+            get => _characterPicPath;
             set
             {
-                if (_path == value) return;
-                _path = value;
+                if (_characterPicPath == value) return;
+                _characterPicPath = value;
                 OnPropertyChanged();
             }
         }
 
-        // 新增游戏时可指定角色信息文件；为空时使用应用数据目录。
+        // 当前游戏目录中的角色信息文件相对路径。
         public string CharacterInfoPath
         {
             get => _characterInfoPath;
@@ -52,6 +54,18 @@ namespace ModManager.Models
             {
                 if (_characterInfoPath == value) return;
                 _characterInfoPath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 当前游戏目录中的游戏图标相对路径。
+        public string GameIconPath
+        {
+            get => _gameIconPath;
+            set
+            {
+                if (_gameIconPath == value) return;
+                _gameIconPath = value;
                 OnPropertyChanged();
             }
         }
@@ -80,7 +94,7 @@ namespace ModManager.Models
             }
         }
 
-        // 游戏选择栏使用的图标路径，由主视图模型按游戏 ID 选择项目内资源。
+        // 游戏选择栏使用的运行时图标 URI，不写入游戏配置文件。
         [System.Text.Json.Serialization.JsonIgnore]
         public string IconPath
         {
@@ -89,6 +103,18 @@ namespace ModManager.Models
             {
                 if (_iconPath == value) return;
                 _iconPath = value;
+                OnPropertyChanged();
+            }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsVectorIcon
+        {
+            get => _isVectorIcon;
+            set
+            {
+                if (_isVectorIcon == value) return;
+                _isVectorIcon = value;
                 OnPropertyChanged();
             }
         }

@@ -1,0 +1,9 @@
+{
+  "Id": "WW",
+  "Name": "WW",
+  "CharacterPicPath": "CharacterPic",
+  "CharacterInfoPath": "CharacterInfo.json",
+  "GameIconPath": "GameIcon.svg",
+  "ModsRootPath": "",
+  "D3dxUserIniPath": ""
+}
