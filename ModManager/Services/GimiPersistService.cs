@@ -22,14 +22,13 @@ namespace ModManager.Services
     ///
     /// d3dx_user.ini 只保存当前生效 Mod 的运行时值；
     /// 本服务在切换前读取当前值，并把每个游戏的 Mod 历史快照保存到
-    /// %LocalAppData%\ModManager\PersistStates\game_&lt;游戏 ID&gt;.json。
+    /// 程序目录下 Data\PersistStates\game_&lt;游戏 ID&gt;.json。
     ///
     /// 快捷键 [Key...] key= 不属于本服务的处理范围。
     /// </summary>
     public class GimiPersistService
     {
-        private static readonly string StateDirectory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
+        private static readonly string StateDirectory = AppDataPaths.DataDirectory;
 
         private static readonly string PersistStateDirectory = Path.Combine(StateDirectory, "PersistStates");
         private static readonly string CombinedPersistStateFile = Path.Combine(StateDirectory, "mod_persist_snapshots.json");

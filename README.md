@@ -79,7 +79,7 @@ dotnet publish .\ModManager\ModManager.csproj `
 | 游戏 ID | 用于区分游戏和保存游戏状态，建议使用稳定且唯一的短名称。 |
 | 游戏名称 | 在界面中显示的名称。 |
 | Mod 根目录 | 必填。该游戏的 Mods 根目录，角色目录应直接位于此目录下；未设置或目录不可访问时，Mod 列表、导入和启用/禁用功能不可用。 |
-| 角色头像目录 | 可选。头像文件放置目录；留空时使用应用数据目录。 |
+| 角色头像目录 | 可选。头像文件放置目录；留空时使用软件目录下的 `Data\CharacterPic`。 |
 | `d3dx_user.ini` | 用于读取当前生效 Mod 的 persist 状态；留空时会尝试根据 Mods 根目录推断。仅在含 `global persist` 的 Mod 保存状态且无法定位该文件时提示。 |
 
 下拉菜单中的游戏可以修改或删除。删除游戏只删除管理器保存的游戏配置、角色信息和 persist 快照，不会删除磁盘上的 Mods 文件。
@@ -141,16 +141,16 @@ global persist $example = 0
 
 ## 应用数据文件
 
-管理器会在 `%LocalAppData%\ModManager` 下保存用户状态：
+管理器会在软件目录下的 `Data` 文件夹中保存用户状态：
 
 | 文件或目录 | 内容 |
 | --- | --- |
-| `mod_manager_state.json` | 游戏配置、角色状态、Mod 来源等管理器界面状态。 |
-| `PersistStates\game_<游戏ID>.json` | 每个游戏独立保存的 `global persist` 历史快照。 |
-| `CharacterInfo\<游戏ID>.json` | 用户可修改的角色信息文件。首次修改内置角色列表时会从内置文件复制到这里。 |
-| `CharacterPic\<游戏ID>\` | 未指定头像目录时使用的用户头像目录。 |
+| `Data\mod_manager_state.json` | 游戏配置、角色状态、Mod 来源等管理器界面状态。 |
+| `Data\PersistStates\game_<游戏ID>.json` | 每个游戏独立保存的 `global persist` 历史快照。 |
+| `Data\CharacterInfo\<游戏ID>.json` | 用户可修改的角色信息文件。首次修改内置角色列表时会从内置文件复制到这里。 |
+| `Data\CharacterPic\<游戏ID>\` | 未指定头像目录时使用的用户头像目录。 |
 
-旧版本的 `modstate.json`、`gimi-persist.json` 和合并的 `mod_persist_snapshots.json` 会在启动时自动迁移；迁移成功后会按游戏写入 `PersistStates` 目录。
+旧版本位于 `%LocalAppData%\ModManager` 的配置会在首次启动时迁移到软件目录下的 `Data` 文件夹，并在迁移成功后删除旧配置。旧版的 `modstate.json`、`gimi-persist.json` 和合并的 `mod_persist_snapshots.json` 也会自动迁移；迁移成功后会按游戏写入 `Data\PersistStates` 目录。
 
 ## 项目结构
 

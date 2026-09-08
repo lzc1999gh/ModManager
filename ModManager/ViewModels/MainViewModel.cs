@@ -21,7 +21,7 @@ namespace ModManager.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
-        private static readonly string StateDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
+        private static readonly string StateDirectory = AppDataPaths.DataDirectory;
         private static readonly string StateFile = Path.Combine(StateDirectory, "mod_manager_state.json");
         private static readonly string LegacyStateFile = Path.Combine(StateDirectory, "modstate.json");
         private static readonly string UserCharacterInfoDirectory = Path.Combine(StateDirectory, "CharacterInfo");
@@ -184,6 +184,8 @@ namespace ModManager.ViewModels
         // =========================================================
         public MainViewModel()
         {
+            // 在创建 Persist 服务前迁移旧版本配置，确保旧 Persist 文件也进入新的 Data 目录。
+            MigrateLegacyAppData();
             _gimiPersistService = new GimiPersistService();
             _addPlaceholder = new Character { Id = Guid.NewGuid().ToString(), Name = "", IsAddPlaceholder = true };
             _addGamePlaceholder = new Game
@@ -1119,10 +1121,64 @@ namespace ModManager.ViewModels
             {
                 if (!File.Exists(StateFile) && File.Exists(LegacyStateFile))
                     File.Move(LegacyStateFile, StateFile);
+                else if (File.Exists(StateFile) && File.Exists(LegacyStateFile))
+                    File.Delete(LegacyStateFile);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[State] Failed to migrate legacy state file: {ex}");
+            }
+        }
+
+        private static void MigrateLegacyAppData()
+        {
+            var legacyDirectory = AppDataPaths.LegacyDataDirectory;
+            var currentDirectory = AppDataPaths.DataDirectory;
+
+            try
+            {
+                var fullLegacyDirectory = Path.GetFullPath(legacyDirectory)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var fullCurrentDirectory = Path.GetFullPath(currentDirectory)
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (string.Equals(fullLegacyDirectory, fullCurrentDirectory, StringComparison.OrdinalIgnoreCase)
+                    || !Directory.Exists(fullLegacyDirectory))
+                {
+                    return;
+                }
+
+                Directory.CreateDirectory(fullCurrentDirectory);
+
+                // 目标目录中的文件优先，旧目录只补充不存在的配置。
+                CopyMissingDirectoryContents(fullLegacyDirectory, fullCurrentDirectory);
+
+                // 只有全部内容复制成功后才删除旧配置目录。
+                Directory.Delete(fullLegacyDirectory, recursive: true);
+                Debug.WriteLine($"[State] Migrated and removed legacy app data: {fullLegacyDirectory}");
+            }
+            catch (Exception ex)
+            {
+                // 迁移失败时保留旧目录，避免因权限或磁盘问题造成配置丢失。
+                Debug.WriteLine($"[State] Failed to migrate legacy app data: {ex}");
+            }
+        }
+
+        private static void CopyMissingDirectoryContents(string sourceDirectory, string destinationDirectory)
+        {
+            Directory.CreateDirectory(destinationDirectory);
+
+            foreach (var sourceFile in Directory.EnumerateFiles(sourceDirectory))
+            {
+                var destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(sourceFile));
+                if (!File.Exists(destinationFile)) File.Copy(sourceFile, destinationFile);
+            }
+
+            foreach (var sourceSubdirectory in Directory.EnumerateDirectories(sourceDirectory))
+            {
+                var destinationSubdirectory = Path.Combine(
+                    destinationDirectory, Path.GetFileName(sourceSubdirectory));
+                CopyMissingDirectoryContents(sourceSubdirectory, destinationSubdirectory);
             }
         }
 
