@@ -46,7 +46,7 @@ namespace ModManager.Models
             }
         }
 
-        // 程序包中当前游戏的默认角色信息文件相对路径。
+        // 当前游戏目录中的角色信息文件相对路径。
         public string CharacterInfoPath
         {
             get => _characterInfoPath;

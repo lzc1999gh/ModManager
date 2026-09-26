@@ -140,17 +140,17 @@ global persist $example = 0
 
 ## 应用数据文件
 
-管理器会在软件目录下的 `Data` 文件夹中保存游戏运行状态；用户可修改的角色信息会保存到 `%LocalAppData%\ModManager`，避免更新程序时被安装包覆盖：
+管理器会在软件目录下的 `Data` 文件夹中保存用户状态：
 
 | 文件或目录 | 内容 |
 | --- | --- |
 | `Data\Games\<游戏ID>\game.json` | 游戏名称、Mods 根目录、游戏图标和 `d3dx_user.ini` 路径。 |
-| `%LocalAppData%\ModManager\Games\<游戏ID>\CharacterInfo.json` | 用户可修改的角色列表；启动时会与程序包中的默认角色表合并。 |
+| `Data\Games\<游戏ID>\CharacterInfo.json` | 当前游戏的角色列表；内置角色信息也直接存放在这里，可由用户修改。 |
 | `Data\Games\<游戏ID>\CharacterPic\` | 当前游戏的角色头像；头像可以为空，右键角色图像区域可添加或修改。 |
 | `Data\Games\<游戏ID>\state.json` | 当前游戏的角色、Mod 来源和预览图等管理器状态。 |
 | `Data\Games\<游戏ID>\Persist\snapshots.json` | 当前游戏独立保存的 `global persist` 历史快照。 |
 
-内置的 GI 和 WW 默认角色表仍随程序包放在 `Data\Games` 中，但不会覆盖 `%LocalAppData%` 中的用户角色列表。升级后，程序包新增的角色会自动加入，用户自行新增的角色会保留。旧版本位于程序目录的角色信息文件会在首次运行时兼容迁移。删除游戏时会删除程序目录中的该游戏数据，但不会删除用户角色信息或 Mods 根目录中的文件。
+内置的 GI 和 WW 也只是预先放入 `Data\Games` 的用户配置，不再从 `Resources\CharacterInfo` 或 `Resources\CharacterPic` 读取。删除游戏时会删除该游戏的数据目录，但不会删除 Mods 根目录中的文件。
 
 ## 项目结构
 
