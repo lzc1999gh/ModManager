@@ -176,7 +176,7 @@
             </Grid.RowDefinitions>
 
             <!-- 顶部信息栏 -->
-            <Border Grid.Row="0" Background="#810000"
+            <Border Grid.Row="0" Background="#FF9999"
                     BorderBrush="{StaticResource ThemeAccentBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,6">
                 <StackPanel Orientation="Horizontal" Margin="10,8">
                     <TextBlock Text="{Binding SelectedGame.Name, StringFormat=游戏：{0}}"

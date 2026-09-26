@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -28,6 +29,12 @@ namespace ModManager.Services
     /// </summary>
     public class GimiPersistService
     {
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
         // 已加载游戏 ID -> 规范化 Mod 路径 -> ini相对路径\变量名 -> 值。
         // 每个游戏只会读写自己的状态文件，缓存仅避免同一次运行中的重复磁盘读取。
         private readonly Dictionary<string, Dictionary<string, Dictionary<string, string>>> _persistStates =
@@ -567,8 +574,7 @@ namespace ModManager.Services
                 }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(stateFile));
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(stateFile, JsonSerializer.Serialize(states, options));
+                File.WriteAllText(stateFile, JsonSerializer.Serialize(states, JsonOptions));
                 return true;
             }
             catch (Exception ex)

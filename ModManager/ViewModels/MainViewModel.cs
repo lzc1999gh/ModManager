@@ -10,6 +10,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Data;
@@ -22,6 +23,11 @@ namespace ModManager.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private static readonly string StateDirectory = AppDataPaths.DataDirectory;
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
         private readonly GimiPersistService _gimiPersistService;
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<Character>> _charactersByGame = new(StringComparer.OrdinalIgnoreCase);
@@ -377,8 +383,7 @@ namespace ModManager.ViewModels
             {
                 EnsureGameDataDirectories(game);
                 var configPath = AppDataPaths.GetGameConfigFilePath(game.Id);
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(configPath, JsonSerializer.Serialize(game, options));
+                File.WriteAllText(configPath, JsonSerializer.Serialize(game, JsonOptions));
                 return true;
             }
             catch (Exception ex)
@@ -542,8 +547,7 @@ namespace ModManager.ViewModels
                     .GroupBy(info => info.Name, StringComparer.OrdinalIgnoreCase)
                     .Select(group => group.First())
                     .ToList();
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(infoPath, JsonSerializer.Serialize(normalized, options));
+                File.WriteAllText(infoPath, JsonSerializer.Serialize(normalized, JsonOptions));
                 return true;
             }
             catch (Exception ex)
@@ -1866,8 +1870,7 @@ namespace ModManager.ViewModels
                     var snapshot = new GameStateSnapshot { Characters = characters };
                     var stateFile = AppDataPaths.GetGameStateFilePath(gameKey);
                     Directory.CreateDirectory(Path.GetDirectoryName(stateFile));
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    File.WriteAllText(stateFile, JsonSerializer.Serialize(snapshot, options));
+                    File.WriteAllText(stateFile, JsonSerializer.Serialize(snapshot, JsonOptions));
                 }
             }
             catch { }
