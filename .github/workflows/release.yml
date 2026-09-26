@@ -3,12 +3,6 @@ name: Release ModManager
 on:
   push:
     tags: [ 'v*' ]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: '手动发版版本号（例如 1.2.3），将自动打 v1.2.3 标签并发布'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -26,12 +20,10 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
-            $v = '${{ github.event.inputs.version }}'.Trim()
-            $tag = 'v' + $v
-          } else {
-            $tag = '${{ github.ref_name }}'
-            $v = $tag -replace '^v', ''
+          $tag = '${{ github.ref_name }}'
+          $v = $tag -replace '^v', ''
+          if ($v -notmatch '^\d+\.\d+\.\d+([.-][0-9A-Za-z.-]+)?$') {
+            throw "Invalid release tag: $tag. Expected v<major>.<minor>.<patch>."
           }
           "version=$v" >> $env:GITHUB_OUTPUT
           "tag=$tag" >> $env:GITHUB_OUTPUT

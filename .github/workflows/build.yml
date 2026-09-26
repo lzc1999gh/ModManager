@@ -1,6 +1,6 @@
 name: CI Build ModManager
 
-# 仅推送/PR 时的持续集成：构建并上传 Artifact，不创建 Release。
+# 仅推送/PR 时的持续集成：验证项目可以构建，不创建发布包。
 # 发版（带版本号与更新信息）请推送 v* 标签，见 release.yml。
 
 on:
@@ -25,19 +25,10 @@ jobs:
       with:
         dotnet-version: '10.0.x'
 
-    # 3. 发布为独立应用（自带 .NET 运行时）
-    - name: Publish project
-      shell: pwsh
-      run: |
-        dotnet publish ./ModManager/ModManager.csproj `
-          -c Release `
-          -r win-x64 `
-          --self-contained true `
-          -o ./publish/ModManager
+    # 3. 还原依赖，但不生成发布包
+    - name: Restore dependencies
+      run: dotnet restore ./ModManager/ModManager.csproj
 
-    # 4. 上传构建产物（Actions 页面可下载）
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ModManager-win-x64
-        path: ./publish/ModManager
+    # 4. 仅构建项目；发布包由 release.yml 在推送 v* 标签时生成
+    - name: Build project
+      run: dotnet build ./ModManager/ModManager.csproj -c Release --no-restore
