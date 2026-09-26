@@ -503,39 +503,61 @@ namespace ModManager.ViewModels
             return AppDataPaths.ResolveGamePath(game.Id ?? game.Name, game.CharacterInfoPath);
         }
 
-        private string GetCharacterInfoWritePath(Game game)
-        {
-            return GetCharacterInfoPath(game);
-        }
-
         private List<CharacterInfo> ReadCharacterInfoFile(Game game)
         {
-            var infoPath = GetCharacterInfoPath(game);
-            if (File.Exists(infoPath))
+            var packagedInfos = ReadCharacterInfoFile(GetCharacterInfoPath(game));
+            var userInfoPath = AppDataPaths.GetUserCharacterInfoPath(game.Id ?? game.Name);
+            var userInfos = ReadCharacterInfoFile(userInfoPath);
+            var infos = new List<CharacterInfo>();
+            var userByName = userInfos.ToDictionary(info => info.Name.Trim(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var packagedInfo in packagedInfos)
             {
-                try
+                if (userByName.TryGetValue(packagedInfo.Name.Trim(), out var userInfo))
                 {
-                    var infos = JsonSerializer.Deserialize<List<CharacterInfo>>(File.ReadAllText(infoPath));
-                    if (infos != null)
-                    {
-                        return infos
-                            .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
-                            .GroupBy(info => info.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-                            .Select(group => group.First())
-                            .ToList();
-                    }
+                    infos.Add(userInfo);
+                    userByName.Remove(packagedInfo.Name.Trim());
                 }
-                catch { }
+                else
+                {
+                    infos.Add(packagedInfo);
+                }
             }
 
-            return new List<CharacterInfo>();
+            infos.AddRange(userByName.Values);
+            if (!File.Exists(userInfoPath) && packagedInfos.Count > 0)
+            {
+                SaveCharacterInfoFile(game, infos, showError: false);
+            }
+
+            return infos;
+        }
+
+        private static List<CharacterInfo> ReadCharacterInfoFile(string infoPath)
+        {
+            if (!File.Exists(infoPath)) return new List<CharacterInfo>();
+
+            try
+            {
+                var infos = JsonSerializer.Deserialize<List<CharacterInfo>>(File.ReadAllText(infoPath));
+                return infos?
+                    .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
+                    .GroupBy(info => info.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList()
+                    ?? new List<CharacterInfo>();
+            }
+            catch
+            {
+                return new List<CharacterInfo>();
+            }
         }
 
         private bool SaveCharacterInfoFile(Game game, IEnumerable<CharacterInfo> infos, bool showError = true)
         {
             try
             {
-                var infoPath = GetCharacterInfoWritePath(game);
+                var infoPath = AppDataPaths.GetUserCharacterInfoPath(game.Id ?? game.Name);
                 Directory.CreateDirectory(Path.GetDirectoryName(infoPath));
                 var normalized = infos
                     .Where(info => !string.IsNullOrWhiteSpace(info?.Name))

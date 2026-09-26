@@ -10,8 +10,16 @@ namespace ModManager.Services
 
         public static string GamesDirectory => Path.Combine(DataDirectory, "Games");
 
+        public static string UserDataDirectory =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ModManager");
+
+        public static string UserGamesDirectory => Path.Combine(UserDataDirectory, "Games");
+
         public static string GetGameDirectory(string gameId) =>
             Path.Combine(GamesDirectory, SanitizeFileName(gameId, "default"));
+
+        public static string GetUserGameDirectory(string gameId) =>
+            Path.Combine(UserGamesDirectory, SanitizeFileName(gameId, "default"));
 
         public static string GetGameStateFilePath(string gameId) =>
             Path.Combine(GetGameDirectory(gameId), "state.json");
@@ -55,6 +63,9 @@ namespace ModManager.Services
         }
 
         public static string GetDefaultCharacterInfoPath() => "CharacterInfo.json";
+
+        public static string GetUserCharacterInfoPath(string gameId) =>
+            Path.Combine(GetUserGameDirectory(gameId), "CharacterInfo.json");
 
         public static string GetDefaultCharacterPicPath() => "CharacterPic";
 
