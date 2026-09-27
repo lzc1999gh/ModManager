@@ -52,7 +52,23 @@ jobs:
             --self-contained true `
             -o ./publish/win-x64
 
-      - name: Package as zip
+      # 先保留包含默认 Data 的完整包，供全新安装使用。
+      - name: Package full archives
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./publish/framework-dependent/* `
+            -DestinationPath ./ModManager-${{ steps.version.outputs.version }}-portable-full.zip
+          Compress-Archive -Path ./publish/win-x64/* `
+            -DestinationPath ./ModManager-${{ steps.version.outputs.version }}-win-x64-full.zip
+
+      # Data 由用户和旧版本安装目录维护，升级包不携带它，避免覆盖用户数据。
+      - name: Exclude user data from upgrade packages
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force ./publish/framework-dependent/Data -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/win-x64/Data -ErrorAction SilentlyContinue
+
+      - name: Package upgrade archives
         shell: pwsh
         run: |
           Compress-Archive -Path ./publish/framework-dependent/* `
@@ -79,7 +95,12 @@ jobs:
             - `ModManager-${{ steps.version.outputs.version }}-win-x64.zip`，解压后运行 `ModManager.exe`
             ### 框架依赖版（体积小，需已装 .NET 10 Desktop Runtime）
             - `ModManager-${{ steps.version.outputs.version }}-portable.zip`，解压后运行 `ModManager.exe`
+            ### 全量包（包含 Data，适合全新安装）
+            - `ModManager-${{ steps.version.outputs.version }}-win-x64-full.zip`
+            - `ModManager-${{ steps.version.outputs.version }}-portable-full.zip`
           files: |
             ./ModManager-${{ steps.version.outputs.version }}-portable.zip
             ./ModManager-${{ steps.version.outputs.version }}-win-x64.zip
+            ./ModManager-${{ steps.version.outputs.version }}-portable-full.zip
+            ./ModManager-${{ steps.version.outputs.version }}-win-x64-full.zip
           generate_release_notes: true

@@ -65,7 +65,7 @@ dotnet publish .\ModManager\ModManager.csproj `
   -o .\publish\ModManager
 ```
 
-发布目录中的文件需要保持原有目录结构，尤其是 `Data` 和 `Resources` 目录不能单独移除。
+发布目录中的文件需要保持原有目录结构，尤其是 `Resources` 目录不能单独移除。GitHub Release 同时提供两类 ZIP：普通 ZIP 不包含 `Data` 目录，适合覆盖升级；文件名带 `-full` 的全量 ZIP 包含 `Data` 目录，适合全新安装。
 
 ## 使用方法
 
