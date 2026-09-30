@@ -68,7 +68,7 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -82,18 +82,22 @@
             <StackPanel
                 Orientation="Horizontal"
                 Margin="6"
-                VerticalAlignment="Center">
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center">
 
                 <TextBlock
                     Text="Mod"
                     FontWeight="Bold"
-                    VerticalAlignment="Center" />
+                    VerticalAlignment="Center"  FontSize="15" FontFamily="Times New Roman"/>
 
                 <TextBlock
-                    Text="{Binding SelectedCharacter.Mods.Count, StringFormat='({0})'}"
+                    Text="{Binding SelectedCharacter.Mods.Count, StringFormat={}}"
                     VerticalAlignment="Center"
+                    FontWeight="Bold"
                     Margin="5,0,0,0"
-                    Foreground="{StaticResource ThemeAccentBrightBrush}" />
+                    Foreground="{StaticResource ThemeAccentBrightBrush}"
+                    FontFamily="Times New Roman"
+                    FontSize="15"/>
             </StackPanel>
 
             <Button
@@ -111,7 +115,7 @@
         </Grid>
 
         <!-- Mod 列表 -->
-        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="3">
+        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="1">
             <ListBox
             Grid.Row="1"
             ItemsSource="{Binding SelectedCharacter.Mods}"

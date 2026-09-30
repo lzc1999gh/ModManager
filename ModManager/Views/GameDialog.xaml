@@ -19,21 +19,21 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="游戏ID：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="GameIdTextBox" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="4" />
+        <TextBox x:Name="GameIdTextBox" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="游戏名称：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="GameNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" Padding="4" />
+        <TextBox x:Name="GameNameTextBox" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8" />
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Mod根目录（必填）：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="ModsRootTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
+        <TextBox x:Name="ModsRootTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,8,8" />
         <Button Grid.Row="2" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseModsRoot_Click" />
 
         <TextBlock Grid.Row="3" Grid.Column="0" Text="游戏图标：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="GameIconTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
+        <TextBox x:Name="GameIconTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,8,8" />
         <Button Grid.Row="3" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseGameIcon_Click" />
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="d3dx_user.ini（Persist）：" Margin="0,0,8,8" VerticalAlignment="Center" />
-        <TextBox x:Name="D3dxUserIniTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,8,8" Padding="4" />
+        <TextBox x:Name="D3dxUserIniTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,8,8" />
         <Button Grid.Row="4" Grid.Column="2" Content="浏览" Width="64" Margin="0,0,0,8" Click="BrowseD3dxUserIni_Click" />
 
         <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">

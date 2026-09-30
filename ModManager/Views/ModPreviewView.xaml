@@ -60,12 +60,12 @@
     <!-- 主布局 -->
     <!-- ===================================================== -->
 
-    <Grid Margin="4">
+    <Grid Margin="4,0,0,0">
 
         <Grid.RowDefinitions>
 
             <!-- 标题 -->
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="32" />
 
             <!-- 图片区域 -->
             <RowDefinition Height="*" />
@@ -80,11 +80,11 @@
         <!-- 标题 -->
         <!-- ================================================= -->
 
-        <DockPanel Grid.Row="0" Margin="4">
-            <TextBlock Text="预览" FontWeight="Bold" />
+        <DockPanel Grid.Row="0" HorizontalAlignment="Center" >
+            <TextBlock Text="预览" FontWeight="Bold" FontFamily="STFangsong" VerticalAlignment="Center"  FontSize="15" />
             <TextBlock Text="{Binding SelectedMod.PreviewPaths.Count, StringFormat={}（共 {0} 张）}"
-                       Foreground="{StaticResource ThemeMutedTextBrush}"
-                       Margin="0,0,0,0" />
+                       Foreground="{StaticResource ThemeMutedTextBrush}"  FontSize="15" FontFamily="STFangsong" VerticalAlignment="Center"
+                       />
         </DockPanel>
 
 
@@ -175,7 +175,7 @@
                 <!-- 下一张按钮 -->
                 <!-- ================================================= -->
 
-                <Button Grid.Column="4"
+                <Button Grid.Column="3"
                     Command="{Binding NextPreviewCommand}"
                     Style="{StaticResource PreviewNavigationButton}"
                     HorizontalAlignment="Stretch"

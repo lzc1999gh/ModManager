@@ -2,49 +2,49 @@
 
 [![Build](https://github.com/lzc1999gh/ModManager/actions/workflows/build.yml/badge.svg)](https://github.com/lzc1999gh/ModManager/actions/workflows/build.yml)
 
-一个基于 WPF 的 Windows Mod 管理器，主要用于管理支持 3DMigoto、XXMI 或 GIMI 配置方式的游戏 Mod。项目当前内置 GI 和 WW 示例游戏配置，也支持用户自行增加其他游戏。
+ModManager 是一个基于 WPF 的 Windows Mod 管理器，面向使用 3DMigoto、XXMI、GIMI 等配置方式的游戏 Mod。
 
-## 功能特性
+项目当前预置 GI 和 WW 两个游戏配置，也支持添加其他游戏。应用数据统一保存在程序目录下，便于复制、迁移和删除整个项目。
 
-- 支持多个游戏，每个游戏可以单独配置：
-  - Mods 根目录；
-  - 游戏图标；
-  - `d3dx_user.ini` 文件路径。
-- 角色列表来自角色信息文件，不依赖头像文件是否存在。
-- 角色可以没有头像；可以通过角色图像区域的右键菜单添加或修改头像，头像会复制到对应的 `CharacterPic` 目录并按角色名保存。
-- 支持新增角色、修改角色名，并同步迁移角色目录、头像和相关状态。
-- 支持管理文件夹 Mod、单文件 Mod 以及 ZIP 导入。
-- 支持启用和禁用 Mod。禁用时使用 `DISABLED_` 前缀重命名文件或文件夹。
-- 支持修改 Mod 名称、填写来源、删除 Mod 和打开 Mod 所在目录。
-- 支持 Mod 预览图片的添加、删除、上一张和下一张。
-- 递归读取 Mod 中的 INI 文件；包含 `Key...` 节并定义 `key=` 的 INI 文件会单独显示为按钮。
-- 支持在不同 INI 文件之间切换，并查看当前 INI 中读取到的快捷键；也可以切换为查看完整 INI 内容。
-- 读取和恢复 `global persist` 值，避免切换 Mod 后丢失 Mod 的运行时持久化状态。
+## 功能概览
 
-## 运行环境
+- 管理多个游戏及其 Mods 根目录、游戏图标和 `d3dx_user.ini` 路径。
+- 按角色组织文件夹 Mod 和单文件 Mod，支持启用、禁用、导入、重命名、删除和打开 Mod 目录。
+- 角色列表来源于 `CharacterInfo.json`，不依赖角色头像是否存在。
+- 角色可以没有头像；可通过右键菜单添加或修改头像，头像会复制到当前游戏的 `CharacterPic` 目录并按角色名保存。
+- 支持新增角色、修改角色名，并同步迁移角色目录、头像和管理器状态。
+- 支持多张 Mod 预览图，并提供添加、删除、上一张和下一张操作。
+- 递归读取 Mod 中包含 `Key...` 节和 `key=` 配置项的 INI 文件，并为每个 INI 文件提供独立按钮。
+- 读取和显示快捷键，不编辑或保存快捷键配置。
+- 按游戏和 Mod 保存、恢复 `global persist` 状态，删除 Mod 时同步删除对应快照。
+- GI 和 WW 支持从官方角色图鉴同步角色名称和头像。
+
+## 系统要求
+
+运行主程序需要：
 
 - Windows 10 或更高版本；
-- .NET 10 SDK（构建项目需要）；
-- WPF 运行环境由 Windows 提供。
+- .NET 10 Desktop Runtime，或直接使用 GitHub Release 提供的自包含版。
 
-依赖（开发 / 运行时）
+使用角色同步功能还需要：
 
-- SharpVectors 1.8.5
-- Ookii.Dialogs.Wpf 3.4.0
+- Python 3；
+- Chrome 或 Edge；
+- 可访问对应官方图鉴页面的网络连接。
 
-开发与运行
+角色同步使用 Python 标准库和本机 Chrome/Edge 的无头模式，不需要额外安装 Python 第三方包。也可以通过 `MODMANAGER_PYTHON` 和 `MODMANAGER_BROWSER` 环境变量指定 Python 或浏览器路径。
 
-- 在 Visual Studio 中打开 ModManager.slnx，选择 ModManager 项目并运行（F5）或发布。
-- 使用 dotnet CLI：
+## 下载与运行
 
-```powershell
-dotnet restore .\ModManager\ModManager.csproj
-dotnet run --project .\ModManager\ModManager.csproj -c Debug
-```
+推荐从 [GitHub Releases](https://github.com/lzc1999gh/ModManager/releases) 下载 Windows 发布包。
 
-本项目不是跨平台应用，不能在 Linux 或 macOS 上运行 WPF 主程序。
+- `*-win-x64.zip`：自包含版，解压后即可运行，不需要安装 .NET。
+- `*-portable.zip`：框架依赖版，体积较小，需要安装 .NET 10 Desktop Runtime。
+- `*-win-x64-full.zip` 和 `*-portable-full.zip`：包含默认 `Data` 数据，适合全新安装。
 
-## 获取和构建
+解压后运行 `ModManager.exe`。发布目录中的文件和目录需要保持原有结构，尤其不能移除 `Resources`、`Tools` 或 `Data` 目录。
+
+## 从源码构建
 
 ```powershell
 git clone https://github.com/lzc1999gh/ModManager.git
@@ -53,9 +53,9 @@ dotnet restore .\ModManager\ModManager.csproj
 dotnet build .\ModManager\ModManager.csproj -c Release --no-restore
 ```
 
-也可以直接从 GitHub 的 [Releases](https://github.com/lzc1999gh/ModManager/releases) 下载 Windows 发布包。
+在 Visual Studio 中也可以打开 `ModManager.slnx`，选择 `ModManager` 项目运行。
 
-若需要生成可直接复制使用的自包含 Windows x64 版本：
+生成自包含 Windows x64 发布目录：
 
 ```powershell
 dotnet publish .\ModManager\ModManager.csproj `
@@ -65,27 +65,25 @@ dotnet publish .\ModManager\ModManager.csproj `
   -o .\publish\ModManager
 ```
 
-发布目录中的文件需要保持原有目录结构，尤其是 `Resources` 目录不能单独移除。GitHub Release 同时提供两类 ZIP：普通 ZIP 不包含 `Data` 目录，适合覆盖升级；文件名带 `-full` 的全量 ZIP 包含 `Data` 目录，适合全新安装。
+## 快速使用
 
-## 使用方法
+### 配置游戏
 
-### 1. 配置游戏
-
-从左侧游戏栏选择已有游戏，或选择最后的“增加游戏”图标。新增游戏时填写：
+从左侧游戏栏选择已有游戏，或选择末尾的“增加游戏”图标。新增或修改游戏时可以设置：
 
 | 配置项 | 说明 |
 | --- | --- |
 | 游戏 ID | 用于区分游戏和保存游戏状态，建议使用稳定且唯一的短名称。 |
 | 游戏名称 | 在界面中显示的名称。 |
-| 游戏图标 | 可选。支持 SVG、PNG、JPG、JPEG、BMP、GIF；程序会复制到该游戏的数据目录并保存为 `GameIcon.*`。 |
-| Mod 根目录 | 必填。该游戏的 Mods 根目录，角色目录应直接位于此目录下；未设置或目录不可访问时，Mod 列表、导入和启用/禁用功能不可用。 |
-| `d3dx_user.ini` | 用于读取当前生效 Mod 的 persist 状态；留空时会尝试根据 Mods 根目录推断。仅在含 `global persist` 的 Mod 保存状态且无法定位该文件时提示。 |
+| Mods 根目录 | 该游戏的 Mods 根目录。目录不存在或为空时，Mod 列表、导入和启用/禁用功能不可用。 |
+| 游戏图标 | 可选，支持 SVG、PNG、JPG、JPEG、BMP、GIF。 |
+| `d3dx_user.ini` | 用于读取当前生效 Mod 的 persist 状态，可留空；只有相关 Mod 声明了 `global persist` 且无法定位该文件时才需要处理。 |
 
-游戏图标的右键菜单可以修改或删除游戏。删除游戏只删除管理器保存的游戏配置、角色信息和 persist 快照，不会删除磁盘上的 Mods 文件。
+游戏图标右键菜单提供修改和删除功能。删除游戏只删除管理器保存的游戏数据，不会删除 Mods 根目录中的文件。
 
-### 2. 目录结构
+### Mods 目录结构
 
-推荐的 Mods 目录结构如下：
+角色目录必须与 `CharacterInfo.json` 中的角色名一致，Mod 直接放在角色目录下：
 
 ```text
 Mods/
@@ -99,58 +97,107 @@ Mods/
    └─ DISABLED_Mod 目录/
 ```
 
-角色目录名称需要与角色信息文件中的角色名一致。管理器会扫描角色目录下的文件夹和文件，并将名称以 `DISABLED_` 开头的项目显示为禁用状态。
+名称以 `DISABLED_` 开头的文件或文件夹会显示为禁用状态。切换 Mod 状态时，程序通过增加或移除该前缀完成启用和禁用。
 
-ZIP 导入时，管理器会优先解压为同名 Mod 目录；解压失败时会作为单文件 Mod 复制。
+导入支持以下压缩格式：
 
-### 3. 预览图片
+```text
+.zip  .7z  .rar  .tar  .gz  .bz2  .xz
+```
 
-为了避免把角色贴图或 Mod 内的其他图片误识别为预览图，管理器只读取符合命名约定的图片：
+加密压缩包和分卷压缩包可能无法直接导入。
+
+### 角色和头像
+
+角色信息保存在当前游戏的 `CharacterInfo.json` 中。新增角色时只创建角色信息，不要求同时设置头像。
+
+头像可以为空。右键角色图像区域，选择“修改头像”后选择图片，程序会将图片复制到当前游戏的 `CharacterPic` 目录，并使用角色名作为文件名。修改角色名时，程序会同步迁移角色头像和角色目录。
+
+### Mod 预览
+
+为了避免把角色贴图或 Mod 内的其他图片误识别为预览图，程序只读取顶层且符合命名约定的图片：
 
 - 文件夹 Mod：`preview_*.png`、`preview_*.jpg`、`preview_*.jpeg`；
 - 单文件 Mod：`原文件名.preview_*.png`、`原文件名.preview_*.jpg`、`原文件名.preview_*.jpeg`。
 
-预览图片只在 Mod 所在目录的顶层查找，不会递归扫描子目录。
+一个 Mod 可以有多张预览图，程序会按文件名排序并支持切换查看。
 
-### 4. INI 快捷键读取
+### INI 快捷键
 
-选中 Mod 后，管理器会递归扫描该 Mod 中的 `.ini` 文件。满足以下条件的文件会生成一个 INI 按钮：
+选中 Mod 后，程序会递归扫描其中的 `.ini` 文件。满足以下条件的 INI 文件会显示为独立按钮：
 
 ```ini
 [KeyToggle]
 key = VK_F1
 ```
 
-所有以 `Key` 开头的节中，名称为 `key` 的配置项都会作为快捷键读取并显示。多个 INI 文件会分别生成按钮，点击按钮即可切换当前显示的快捷键内容；“打开”按钮会打开当前选中的 INI 文件。
+所有以 `Key` 开头的节中，名称为 `key` 的配置项都会被读取。点击不同的 INI 按钮时，下方只显示当前选中 INI 文件中的快捷键内容；“打开”按钮打开当前选中的 INI 文件。
 
-当前快捷键功能只负责读取和显示，不会编辑或保存快捷键值，也不会把 `key=` 写回 `d3dx_user.ini`。
+当前快捷键功能仅用于读取和显示，不会编辑快捷键，也不会把 `key=` 写入 `d3dx_user.ini`。
 
-### 5. Persist 状态
+### 同步角色信息
 
-部分 Mod 会在 INI 中声明 `global persist` 变量，例如：
+选择 GI 或 WW 后，点击“角色”标题栏中的“同步”按钮：
+
+- GI：[原神观测枢角色图鉴](https://baike.mihoyo.com/ys/obc/channel/map/189/25?bbs_presentation_style=no_header&visit_device=pc)；
+- WW：[鸣潮库街区角色图鉴](https://wiki.kurobbs.com/mc/catalogue/list?fid=1099&sid=1105)。
+
+同步是增量操作：
+
+- 只新增本地缺少的角色；
+- 下载缺少的头像，不覆盖已有头像；
+- 不删除本地角色、自定义角色、Mod 目录或已有状态；
+- 官方页面访问失败时，不修改本地角色信息文件。
+
+原神图鉴页面中的说明性链接“如何成为观测者”不会被加入角色列表。
+
+### Persist 状态
+
+部分 Mod 会声明 `global persist` 变量：
 
 ```ini
 [Constants]
 global persist $example = 0
 ```
 
-由于运行时同一角色通常只会保留当前生效 Mod 的 persist 信息，管理器在禁用当前 Mod 前读取配置，在启用目标 Mod 前恢复该 Mod 的历史值到对应 INI 声明中。`d3dx_user.ini` 仍由游戏运行环境负责生成和维护，管理器不会把多个 Mod 的状态同时写入其中。
+同一角色运行时通常只保留当前生效 Mod 的 persist 信息。因此程序在切换 Mod 时：
 
-删除 Mod 时会同时删除该 Mod 保存的 persist 快照；重命名 Mod、角色或游戏时会迁移对应状态。
+1. 禁用当前 Mod 前，从 `d3dx_user.ini` 读取当前值；
+2. 将该 Mod 的值保存到当前游戏的 persist 快照文件；
+3. 启用目标 Mod 前，将目标 Mod 的历史值写回其 INI 文件；
+4. 等待游戏运行环境重新加载并生成当前 Mod 的用户状态。
 
-## 应用数据文件
+程序不会把多个 Mod 的 persist 信息同时写入 `d3dx_user.ini`。删除 Mod 时会删除该 Mod 的快照；重命名 Mod、角色或游戏时会迁移对应快照。
 
-管理器会在软件目录下的 `Data` 文件夹中保存用户状态：
+## 应用数据
+
+所有应用数据都保存在程序目录下的 `Data` 文件夹中：
+
+```text
+Data/
+└─ Games/
+   └─ <游戏ID>/
+      ├─ game.json
+      ├─ CharacterInfo.json
+      ├─ CharacterPic/
+      ├─ GameIcon.svg
+      ├─ state.json
+      └─ Persist/
+         └─ snapshots.json
+```
 
 | 文件或目录 | 内容 |
 | --- | --- |
-| `Data\Games\<游戏ID>\game.json` | 游戏名称、Mods 根目录、游戏图标和 `d3dx_user.ini` 路径。 |
-| `Data\Games\<游戏ID>\CharacterInfo.json` | 当前游戏的角色列表；内置角色信息也直接存放在这里，可由用户修改。 |
-| `Data\Games\<游戏ID>\CharacterPic\` | 当前游戏的角色头像；头像可以为空，右键角色图像区域可添加或修改。 |
-| `Data\Games\<游戏ID>\state.json` | 当前游戏的角色、Mod 来源和预览图等管理器状态。 |
-| `Data\Games\<游戏ID>\Persist\snapshots.json` | 当前游戏独立保存的 `global persist` 历史快照。 |
+| `game.json` | 游戏名称、Mods 根目录、游戏图标和 `d3dx_user.ini` 路径。 |
+| `CharacterInfo.json` | 当前游戏的角色列表；内置角色与用户新增角色统一保存在这里。 |
+| `CharacterPic/` | 当前游戏的角色头像，允许为空。 |
+| `GameIcon.*` | 当前游戏的图标。 |
+| `state.json` | 角色、Mod 来源、预览图等管理器状态。 |
+| `Persist/snapshots.json` | 当前游戏独立保存的 `global persist` 历史快照。 |
 
-内置的 GI 和 WW 也只是预先放入 `Data\Games` 的用户配置，不再从 `Resources\CharacterInfo` 或 `Resources\CharacterPic` 读取。删除游戏时会删除该游戏的数据目录，但不会删除 Mods 根目录中的文件。
+GI 和 WW 的内置信息也只是预先放入 `Data/Games` 的用户数据，程序不会从 `Resources/CharacterInfo` 或 `Resources/CharacterPic` 读取角色信息。
+
+升级时请使用不带 `-full` 的发布包，以保留已有 `Data`；首次安装或需要恢复默认数据时使用带 `-full` 的发布包。
 
 ## 项目结构
 
@@ -159,33 +206,37 @@ ModManager/
 ├─ ModManager.slnx
 ├─ ModManager/
 │  ├─ Models/          数据模型
-│  ├─ Services/        persist 状态等服务
+│  ├─ Services/        数据路径、persist 和角色同步服务
 │  ├─ ViewModels/      界面逻辑和命令
 │  ├─ Views/           WPF 用户控件和对话框
 │  ├─ Resources/       程序图标和界面资源
+│  ├─ Tools/           角色图鉴同步脚本
 │  └─ ModManager.csproj
 ├─ Data/Games/         内置及用户游戏数据
-├─ .github/workflows/  GitHub Actions 构建配置
+├─ .github/workflows/  CI 和 Release 工作流
 └─ README.md
 ```
 
 ## 已知限制
 
-- 目前只支持 Windows/WPF 和 `win-x64` 自包含发布流程。
-- 快捷键目前仅支持读取和显示，不能在管理器内编辑或保存。
-- Mod 目录名称和角色目录名称应避免使用 Windows 文件名非法字符。
-- 管理器不会替用户下载 Mod，也不会自动修改游戏本体文件。
-- 仓库当前未附带许可证文件。除非另行获得项目作者许可，否则不应将本项目代码作为已授权开源软件进行再分发。
+- 目前仅支持 Windows/WPF；GitHub Release 提供的自包含包目标为 `win-x64`。
+- 快捷键目前只能读取和显示，不能在管理器内编辑或保存。
+- 角色目录名、Mod 名称和角色名应避免使用 Windows 文件名非法字符。
+- 程序不会替用户下载 Mod，也不会自动修改游戏本体文件。
+- 同步功能依赖官方页面结构，页面改版后可能需要更新爬虫。
+- 仓库当前未附带许可证文件。除非获得项目作者许可，否则不应将本项目代码作为已授权开源软件再分发。
 
-## 贡献
+## 开发与贡献
 
-欢迎提交 Issue 或 Pull Request。提交修改前建议先确认：
+欢迎提交 Issue 或 Pull Request。提交修改前建议运行：
 
 ```powershell
 dotnet build .\ModManager\ModManager.csproj -c Release
 git diff --check
 ```
 
-## 版本与发布
+CI 会在推送到 `master` 分支或创建针对 `master` 的 Pull Request 时构建项目。推送符合 `v<major>.<minor>.<patch>` 格式的 Git 标签时，Release 工作流会生成并发布四类 Windows ZIP 包。
 
-版本发布使用 Git 标签标记，例如 `v0.1.0`。Windows 发布包由 `.github/workflows/build.yml` 中的 GitHub Actions 在 `master` 分支构建，目标为自包含 `win-x64` 应用。
+## 许可证
+
+当前仓库未提供许可证文件。使用、修改或再分发前，请先获得项目作者授权。

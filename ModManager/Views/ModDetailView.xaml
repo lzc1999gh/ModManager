@@ -10,7 +10,6 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Margin" Value="2" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -34,7 +33,6 @@
             <Setter Property="Background" Value="#F3F6FA" />
             <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,3" />
             <Setter Property="Height" Value="26" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -61,7 +59,6 @@
         <Style x:Key="IniOpenButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="56" />
             <Setter Property="Height" Value="26" />
-            <Setter Property="Padding" Value="10,2" />
             <Setter Property="Background" Value="#F3F6FA" />
             <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -87,16 +84,16 @@
             </Setter>
         </Style>
     </UserControl.Resources>
-    <Grid Margin="4,4,0,0" >
+    <Grid Margin="4,0,0,0">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="详情" FontWeight="Bold" Margin="4,4,4,6" />
+        <TextBlock Grid.Row="0" Text="详情" FontWeight="Bold" FontFamily="STFangsong" VerticalAlignment="Center" HorizontalAlignment="Center"  FontSize="15" />
 
-        <Border Grid.Row="1" BorderBrush="{StaticResource ThemeBorderBrush}" Background="Transparent" BorderThickness="1" CornerRadius="5" Padding="8" Margin="0,0,0,8">
+        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="8" Margin="0,0,0,5">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -181,7 +178,7 @@
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" BorderBrush="{StaticResource ThemeBorderBrush}" Background="Transparent" BorderThickness="1" CornerRadius="5" Padding="4">
+        <Border Grid.Row="2" Style="{StaticResource SectionContentBorderStyle}" Padding="4">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -190,7 +187,7 @@
                 </Grid.RowDefinitions>
 
                 <DockPanel Grid.Row="0">
-                    <StackPanel Orientation="Horizontal" >
+                    <StackPanel Orientation="Horizontal">
                         <ToggleButton IsChecked="{Binding ShowIniContent, Mode=TwoWay}"
                                       Width="34" Height="20" VerticalAlignment="Center"
                                       ToolTip="关闭显示快捷键，开启显示 INI 内容" HorizontalAlignment="Center">

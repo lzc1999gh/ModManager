@@ -81,13 +81,13 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="76" />
+            <ColumnDefinition Width="60" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
         <!-- 左侧游戏图标栏 -->
         <Border Grid.Column="0" Background="#FFFFFF">
-            <Grid Margin="4">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -96,7 +96,7 @@
                 <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" >
                     <ListBox ItemsSource="{Binding Games}"
                              SelectedItem="{Binding SelectedGame, Mode=TwoWay}"
-                             Background="Transparent" BorderThickness="0" Padding="2"
+                             Background="Transparent" BorderThickness="0"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              ScrollViewer.VerticalScrollBarVisibility="Auto"
                              ItemContainerStyle="{StaticResource GameListItemStyle}">
@@ -176,21 +176,20 @@
             </Grid.RowDefinitions>
 
             <!-- 顶部信息栏 -->
-            <Border Grid.Row="0" Background="#FF9999"
-                    BorderBrush="{StaticResource ThemeAccentBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,6">
+            <Border Grid.Row="0" Background="#606060" BorderThickness="3" BorderBrush="#F08080">
                 <StackPanel Orientation="Horizontal" Margin="10,8">
-                    <TextBlock Text="{Binding SelectedGame.Name, StringFormat=游戏：{0}}"
-                               FontWeight="Bold" VerticalAlignment="Center" Foreground="Black" />
-                    <TextBlock Text="    Mods 根目录：" VerticalAlignment="Center" Margin="14,0,6,0" FontWeight="Bold"
-                               Foreground="Black" />
+                    <TextBlock Text="{Binding SelectedGame.Name, StringFormat=当前游戏：{0}}"
+                               FontWeight="Bold" VerticalAlignment="Center" Foreground="WhiteSmoke" FontSize="15" FontStyle="Italic"/>
+                    <TextBlock Text="Mods 根目录：" VerticalAlignment="Center" Margin="14,0,6,0" FontWeight="Bold"
+                               Foreground="WhiteSmoke" FontStyle="Oblique"/>
                     <Grid Width="420" Height="28">
-                        <Border Background="#FFFFFF" BorderBrush="{StaticResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="14" />
+                        <Border Background="#FFFFFF" BorderBrush="{StaticResource ThemeBorderBrush}" BorderThickness="1" CornerRadius="12" />
                         <TextBlock Text="{Binding SelectedGame.ModsRootPath}"
-                                   Margin="10,0,82,0" VerticalAlignment="Center"
+                                   Margin="10,0,85,0" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis" Foreground="{StaticResource ThemeTextBrush}" />
                         <Button Content="打开" Command="{Binding OpenModsRootCommand}"
-                                Style="{StaticResource RootOpenButtonStyle}"
-                                HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0" />
+                                Style="{StaticResource RootOpenButtonStyle}" Height="28"
+                                HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
             </Border>

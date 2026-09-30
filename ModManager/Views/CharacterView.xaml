@@ -1,20 +1,17 @@
 <UserControl x:Class="ModManager.Views.CharacterView"
-    x:Name="CharacterViewRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
     xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
     xmlns:conv="clr-namespace:ModManager.Converters"
-    xmlns:conv2="clr-namespace:ModManager.Converters"
     mc:Ignorable="d">
     <UserControl.Resources>
         <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
-        <conv2:IntGreaterThanZeroToVisibilityConverter x:Key="IntGtZeroToVis" />
+        <conv:IntGreaterThanZeroToVisibilityConverter x:Key="IntGtZeroToVis" />
         <Style x:Key="RoundedImageToggleButton" TargetType="ToggleButton">
             <Setter Property="Width" Value="28" />
             <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="3" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -44,7 +41,6 @@
         <Style x:Key="ImageButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="28" />
             <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="3" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
@@ -73,22 +69,31 @@
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="32" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center"/>
-            <ToggleButton Grid.Column="1" Style="{StaticResource RoundedImageToggleButton}" Margin="2" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色" BorderThickness="1">
+            <TextBlock Text="角色" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="15" FontFamily="STFangsong"/>
+            <ToggleButton Grid.Column="1" Style="{StaticResource RoundedImageToggleButton}" VerticalAlignment="Center" IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}" ToolTip="仅显示有 Mod 的角色">
                 <svg:SvgViewbox Width="18" Height="18" Source="pack://siteoforigin:,,,/Resources/Icons/sw.svg" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </ToggleButton>
+            <Button Grid.Column="2" Height="28" MinWidth="58" Margin="6,0,0,0"
+                    Padding="6,0" Command="{Binding SyncCharacterInfoCommand}"
+                    ToolTip="从官方图鉴同步角色信息">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <svg:SvgViewbox Width="16" Height="16" Source="pack://siteoforigin:,,,/Resources/Icons/re.svg" />
+                    <TextBlock Text="同步" Margin="4,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
         </Grid>
 
         <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="1" Margin="0,0,2,0">
-            <ListBox ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" MinWidth="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0" Padding="0" Margin="0">
+            <ListBox ItemsSource="{Binding CharactersView}" SelectedItem="{Binding SelectedCharacter}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" BorderThickness="0">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <!-- 使用横向 WrapPanel 并设置 ItemWidth，这样会自动换行形成多列并支持纵向滚动 -->
@@ -97,7 +102,7 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Width="70" Margin="0" HorizontalAlignment="Center">
+                        <StackPanel Width="70" HorizontalAlignment="Center">
                             <!-- 普通角色项：头像 + 名字（占位项时隐藏） -->
                             <StackPanel>
                                 <StackPanel.Style>
@@ -118,7 +123,7 @@
                                         </StackPanel>
                                     </ToolTip>
                                 </StackPanel.ToolTip>
-                                <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="1" Background="Transparent" HorizontalAlignment="Center" Padding="2">
+                                <Border Width="50" Height="50" CornerRadius="8" BorderBrush="Black" BorderThickness="0" Background="Transparent" HorizontalAlignment="Center" Padding="2">
                                     <Border.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Header="修改头像" Click="ChangeCharacterIcon_Click" />
@@ -236,4 +241,3 @@
         </Border>
     </Grid>
 </UserControl>
-

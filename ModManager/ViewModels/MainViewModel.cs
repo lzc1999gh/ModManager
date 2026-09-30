@@ -7,16 +7,18 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using SharpCompress.Archives;
+using SharpCompress.Common;
 
 namespace ModManager.ViewModels
 {
@@ -29,6 +31,7 @@ namespace ModManager.ViewModels
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         private readonly GimiPersistService _gimiPersistService;
+        private readonly CharacterInfoSyncService _characterInfoSyncService = new();
         private readonly Dictionary<string, string?> _sourcesByModPath = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<Character>> _charactersByGame = new(StringComparer.OrdinalIgnoreCase);
         // 列表末尾的“新增角色”占位项，始终保持在角色列表最后一位
@@ -85,6 +88,8 @@ namespace ModManager.ViewModels
                 _selectedGame = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(ModsRootPath));
+                OnPropertyChanged(nameof(CanSyncCharacterInfo));
+                CommandManager.InvalidateRequerySuggested();
                 LoadCharactersForGame(_selectedGame);
                 var gamePath = _selectedGame?.ModsRootPath;
                 if (!string.IsNullOrEmpty(gamePath) && Directory.Exists(gamePath))
@@ -145,6 +150,7 @@ namespace ModManager.ViewModels
         public ICommand SelectIniFileCommand { get; }
         public ICommand OpenModFolderCommand { get; }
         public ICommand AddCharacterCommand { get; }
+        public ICommand SyncCharacterInfoCommand { get; }
         public ICommand AddCharacterIconCommand { get; }
         public ICommand RenameCharacterCommand { get; }
         public ICommand EditGameCommand { get; }
@@ -181,6 +187,24 @@ namespace ModManager.ViewModels
         }
 
         public ICollectionView CharactersView { get; private set; }
+
+        public bool CanSyncCharacterInfo => SelectedGame != null
+            && !_isSyncingCharacterInfo
+            && _characterInfoSyncService.Supports(SelectedGame);
+
+        private bool _isSyncingCharacterInfo;
+        public bool IsSyncingCharacterInfo
+        {
+            get => _isSyncingCharacterInfo;
+            private set
+            {
+                if (_isSyncingCharacterInfo == value) return;
+                _isSyncingCharacterInfo = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CanSyncCharacterInfo));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
 
         // =========================================================
         // Constructor
@@ -221,6 +245,9 @@ namespace ModManager.ViewModels
             }, p => p is IniFileInfo);
             OpenModFolderCommand = new RelayCommand(OpenModFolder, p => SelectedMod != null);
             AddCharacterCommand = new RelayCommand(p => AddCharacter());
+            SyncCharacterInfoCommand = new RelayCommand(
+                p => _ = SyncCharacterInfoAsync(),
+                p => CanSyncCharacterInfo);
             AddCharacterIconCommand = new RelayCommand(p =>
             {
                 if (p is Character character) ChangeCharacterIcon(character);
@@ -493,6 +520,7 @@ namespace ModManager.ViewModels
         // Character Information and Icons
         // =========================================================
         private static readonly string[] CharacterImageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
+        private static readonly string[] ArchiveExtensions = { ".zip", ".7z", ".rar", ".tar", ".gz", ".bz2", ".xz" };
 
         private string GetCharacterInfoPath(Game game)
         {
@@ -501,11 +529,6 @@ namespace ModManager.ViewModels
                 ? AppDataPaths.GetDefaultCharacterInfoPath()
                 : game.CharacterInfoPath;
             return AppDataPaths.ResolveGamePath(game.Id ?? game.Name, game.CharacterInfoPath);
-        }
-
-        private string GetCharacterInfoWritePath(Game game)
-        {
-            return GetCharacterInfoPath(game);
         }
 
         private List<CharacterInfo> ReadCharacterInfoFile(Game game)
@@ -535,7 +558,7 @@ namespace ModManager.ViewModels
         {
             try
             {
-                var infoPath = GetCharacterInfoWritePath(game);
+                var infoPath = GetCharacterInfoPath(game);
                 Directory.CreateDirectory(Path.GetDirectoryName(infoPath));
                 var normalized = infos
                     .Where(info => !string.IsNullOrWhiteSpace(info?.Name))
@@ -557,6 +580,89 @@ namespace ModManager.ViewModels
                     MessageBox.Show($"保存角色信息失败：{ex.Message}", "角色", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 return false;
+            }
+        }
+
+        private async Task SyncCharacterInfoAsync()
+        {
+            if (!CanSyncCharacterInfo) return;
+
+            var game = SelectedGame;
+            IsSyncingCharacterInfo = true;
+            try
+            {
+                var remoteCharacters = await _characterInfoSyncService.FetchCharacterInfosAsync(game);
+                var currentInfos = ReadCharacterInfoFile(game);
+                var existingNames = new HashSet<string>(
+                    currentInfos.Select(info => info.Name.Trim()),
+                    StringComparer.OrdinalIgnoreCase);
+                var addedCount = 0;
+
+                var iconDirectory = GetCharacterIconDirectory(game);
+                var avatarFailureCount = 0;
+                foreach (var remoteCharacter in remoteCharacters)
+                {
+                    if (string.IsNullOrWhiteSpace(remoteCharacter.ImageUrl))
+                    {
+                        avatarFailureCount++;
+                        if (!existingNames.Add(remoteCharacter.Name)) continue;
+                    }
+                    else if (!existingNames.Add(remoteCharacter.Name))
+                    {
+                        if (FindCharacterIcon(game, remoteCharacter.Name) != null) continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(remoteCharacter.ImageUrl))
+                    {
+                        try
+                        {
+                            await _characterInfoSyncService.DownloadAvatarAsync(
+                                remoteCharacter.ImageUrl,
+                                Path.Combine(iconDirectory, remoteCharacter.Name + ".png"));
+                        }
+                        catch
+                        {
+                            avatarFailureCount++;
+                        }
+                    }
+
+                    if (currentInfos.All(info => !string.Equals(info.Name, remoteCharacter.Name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        currentInfos.Add(new CharacterInfo
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Name = remoteCharacter.Name
+                        });
+                        addedCount++;
+                    }
+                }
+
+                if (addedCount > 0 && !SaveCharacterInfoFile(game, currentInfos)) return;
+
+                if (ReferenceEquals(SelectedGame, game))
+                {
+                    LoadCharactersForGame(game);
+                    SaveState();
+                }
+
+                MessageBox.Show(
+                    $"同步完成。\n图鉴角色：{remoteCharacters.Count} 个\n新增角色：{addedCount} 个\n"
+                    + (avatarFailureCount == 0 ? "头像已保存。" : $"头像下载失败：{avatarFailureCount} 个。"),
+                    "同步角色",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (TaskCanceledException)
+            {
+                MessageBox.Show("同步超时，请检查网络连接后重试。", "同步角色", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"同步角色失败：{ex.Message}", "同步角色", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                IsSyncingCharacterInfo = false;
             }
         }
 
@@ -1514,7 +1620,7 @@ namespace ModManager.ViewModels
                     else if (File.Exists(sourcePath))
                     {
                         var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
-                        if (extension == ".zip")
+                        if (ArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
                         {
                             var modFolderName = Path.GetFileNameWithoutExtension(sourcePath);
                             var destination = Path.Combine(targetDir, modFolderName);
@@ -1522,7 +1628,15 @@ namespace ModManager.ViewModels
                             Directory.CreateDirectory(destination);
                             try
                             {
-                                ZipFile.ExtractToDirectory(sourcePath, destination);
+                                using var archive = ArchiveFactory.OpenArchive(sourcePath);
+                                foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                                {
+                                    entry.WriteToDirectory(destination, new ExtractionOptions
+                                    {
+                                        ExtractFullPath = true,
+                                        Overwrite = true
+                                    });
+                                }
                             }
                             catch
                             {
