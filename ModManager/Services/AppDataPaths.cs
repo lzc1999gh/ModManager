@@ -22,7 +22,7 @@ namespace ModManager.Services
         public static string GetPersistStateFilePath(string gameId) =>
             Path.Combine(GetGameDirectory(gameId), "Persist", "snapshots.json");
 
-        public static string ResolveGamePath(string gameId, string path, string defaultRelativePath = null)
+        public static string ResolveGamePath(string gameId, string? path, string? defaultRelativePath = null)
         {
             var effectivePath = string.IsNullOrWhiteSpace(path) ? defaultRelativePath : path.Trim();
             if (string.IsNullOrWhiteSpace(effectivePath)) return string.Empty;

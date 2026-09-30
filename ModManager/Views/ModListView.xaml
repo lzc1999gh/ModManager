@@ -3,139 +3,57 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:conv="clr-namespace:ModManager.Converters"
     xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
     mc:Ignorable="d">
 
-    <UserControl.Resources>
-        <conv:ImagePathToImageSourceConverter x:Key="ImagePathToImageSource" />
-
-        <!-- Mod 名称悬浮提示 -->
-        <Style x:Key="ModNameToolTipStyle" TargetType="ToolTip">
-            <Setter Property="Placement" Value="Mouse" />
-            <Setter Property="PlacementRectangle" Value="0,0,0,0" />
-            <Setter Property="HorizontalOffset" Value="10" />
-            <Setter Property="VerticalOffset" Value="10" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="Background" Value="#F8F8F8" />
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="MaxWidth" Value="500" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToolTip">
-                        <Border
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="5"
-                            Padding="{TemplateBinding Padding}"
-                            SnapsToDevicePixels="True">
-
-                            <ContentPresenter
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="ImageButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="28" />
-            <Setter Property="Height" Value="28" />
-            <Setter Property="Padding" Value="3" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource ThemeAccentBrightBrush}" /></Trigger>
-                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="Border" Property="Background" Value="#E8F3FF" /></Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="32" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 顶部 -->
-        <Grid Grid.Row="0">
+        <!-- ============================================================
+             标题栏
+             ============================================================ -->
+        <Grid Grid.Row="0" Height="44">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel
-                Orientation="Horizontal"
-                Margin="6"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Center">
-
-                <TextBlock
-                    Text="Mod"
-                    FontWeight="Bold"
-                    VerticalAlignment="Center"  FontSize="15" FontFamily="Times New Roman"/>
-
-                <TextBlock
-                    Text="{Binding SelectedCharacter.Mods.Count, StringFormat={}}"
-                    VerticalAlignment="Center"
-                    FontWeight="Bold"
-                    Margin="5,0,0,0"
-                    Foreground="{StaticResource ThemeAccentBrightBrush}"
-                    FontFamily="Times New Roman"
-                    FontSize="15"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,0,0">
+                <Border Style="{StaticResource SectionAccentBarStyle}" />
+                <TextBlock Text="Mod" Style="{StaticResource SectionTitleStyle}" />
+                <Border Style="{StaticResource CountBadgeStyle}">
+                    <TextBlock Text="{Binding SelectedCharacter.Mods.Count}" Style="{StaticResource CountBadgeTextStyle}" />
+                </Border>
             </StackPanel>
 
-            <Button
-                Grid.Column="1"
-                Command="{Binding RefreshModsCommand}"
-                Style="{StaticResource ImageButtonStyle}"
-                Margin="2"
-                VerticalAlignment="Center">
-
-                <svg:SvgViewbox
-                    Width="18"
-                    Height="18"
-                    Source="pack://siteoforigin:,,,/Resources/Icons/re.svg" />
+            <Button Grid.Column="1"
+                    Command="{Binding RefreshModsCommand}"
+                    Style="{StaticResource IconButtonStyle}"
+                    ToolTip="刷新 Mod 列表">
+                <svg:SvgViewbox Width="17" Height="17" Source="pack://siteoforigin:,,,/Resources/Icons/re.svg" />
             </Button>
         </Grid>
 
-        <!-- Mod 列表 -->
-        <Border Grid.Row="1" Style="{StaticResource SectionContentBorderStyle}" Padding="1">
-            <ListBox
-            Grid.Row="1"
-            ItemsSource="{Binding SelectedCharacter.Mods}"
-            SelectedItem="{Binding SelectedMod}"
-            AllowDrop="True"
-            PreviewDragOver="ListBox_PreviewDragOver"
-            Drop="ListBox_Drop"
-            ScrollViewer.VerticalScrollBarVisibility="Auto"
-            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-            HorizontalContentAlignment="Stretch"
-            BorderThickness="0"
-            >
+        <!-- ============================================================
+             Mod 列表
+             ============================================================ -->
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+            <ListBox ItemsSource="{Binding SelectedCharacter.Mods}"
+                     SelectedItem="{Binding SelectedMod}"
+                     AllowDrop="True"
+                     PreviewDragOver="ListBox_PreviewDragOver"
+                     Drop="ListBox_Drop"
+                     Padding="8"
+                     HorizontalContentAlignment="Stretch">
+
                 <ListBox.Resources>
-
-                    <BooleanToVisibilityConverter x:Key="BoolToVis" />
-
-                    <!-- 每个 Mod 项目 -->
+                    <!-- 单个 Mod 卡片：左侧色条表示启用态，开关控制启停 -->
                     <Style TargetType="ListBoxItem" x:Key="ModListItemStyle">
                         <Setter Property="Padding" Value="0" />
-                        <Setter Property="Margin" Value="6" />
+                        <Setter Property="Margin" Value="0,0,0,6" />
                         <Setter Property="HorizontalAlignment" Value="Stretch" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                         <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -147,133 +65,93 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
-                                    <Border
-                                    x:Name="Bd"
-                                    CornerRadius="6"
-                                    BorderThickness="1"
-                                    BorderBrush="{StaticResource ThemeBorderBrush}"
-                                    Background="#FFFFFF"
-                                    SnapsToDevicePixels="True"
-                                    HorizontalAlignment="Stretch">
-                                        <Grid Height="56">
+                                    <Border x:Name="Bd"
+                                            CornerRadius="8"
+                                            BorderThickness="1"
+                                            BorderBrush="{StaticResource ThemeBorderBrush}"
+                                            Background="{StaticResource ThemeSurfaceBrush}"
+                                            SnapsToDevicePixels="True">
+                                        <Grid Height="54">
                                             <Grid.ColumnDefinitions>
-                                                <!-- 名称区域 -->
+                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
-                                                <!-- 状态区域 -->
-                                                <ColumnDefinition Width="40" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
+
+                                            <!-- 启用指示条 -->
+                                            <Border x:Name="AccentBar" Grid.Column="0"
+                                                    Width="3" Margin="5,11"
+                                                    CornerRadius="1.5" Background="Transparent" />
+
                                             <!-- 名称 -->
-                                            <ContentPresenter
-                                            Grid.Column="0"
-                                            HorizontalAlignment="Stretch"
-                                            VerticalAlignment="Center"
-                                            Margin="12,0,6,0"
-                                            RecognizesAccessKey="True" />
-                                            <!-- 状态切换按钮：保持右侧状态区域的原有宽度 -->
-                                            <ToggleButton
-                                            Grid.Column="1"
-                                            Command="{Binding DataContext.ToggleModCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                                            CommandParameter="{Binding}"
-                                            IsChecked="{Binding Enabled, Mode=OneWay}"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Width="34"
-                                            Height="20"
-                                            Cursor="Hand"
-                                            ToolTip="启用 / 禁用">
-                                                <ToggleButton.Style>
-                                                    <Style TargetType="ToggleButton">
-                                                        <Setter Property="Template">
-                                                            <Setter.Value>
-                                                                <ControlTemplate TargetType="ToggleButton">
-                                                                    <Grid Width="34" Height="20">
-                                                                        <Border x:Name="Track" Background="{StaticResource ThemeBorderBrush}" CornerRadius="10" />
-                                                                        <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="White" Margin="2"
-                                                                             HorizontalAlignment="Left" VerticalAlignment="Center" />
-                                                                    </Grid>
-                                                                    <ControlTemplate.Triggers>
-                                                                        <Trigger Property="IsChecked" Value="True">
-                                                                            <Setter TargetName="Track" Property="Background" Value="{StaticResource ThemeAccentBrush}" />
-                                                                            <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right" />
-                                                                        </Trigger>
-                                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                                            <Setter TargetName="Track" Property="Opacity" Value="0.85" />
-                                                                        </Trigger>
-                                                                    </ControlTemplate.Triggers>
-                                                                </ControlTemplate>
-                                                            </Setter.Value>
-                                                        </Setter>
-                                                    </Style>
-                                                </ToggleButton.Style>
-                                            </ToggleButton>
+                                            <ContentPresenter Grid.Column="1"
+                                                              Margin="8,0,6,0"
+                                                              HorizontalAlignment="Stretch"
+                                                              VerticalAlignment="Center"
+                                                              RecognizesAccessKey="True" />
+
+                                            <!-- 启停开关 -->
+                                            <ToggleButton Grid.Column="2"
+                                                          Margin="0,0,12,0"
+                                                          Command="{Binding DataContext.ToggleModCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                          CommandParameter="{Binding}"
+                                                          IsChecked="{Binding Enabled, Mode=OneWay}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          ToolTip="启用 / 禁用"
+                                                          Style="{StaticResource SwitchToggleStyle}" />
                                         </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>
-                                        <!-- Enabled -->
-                                        <DataTrigger
-                                        Binding="{Binding Enabled}"
-                                        Value="True">
-                                            <Setter
-                                            TargetName="Bd"
-                                            Property="BorderBrush"
-                                            Value="{StaticResource ThemeAccentBrush}" />
-                                            <Setter
-                                            TargetName="Bd"
-                                            Property="Background"
-                                            Value="#EEFFFB" />
+                                        <!-- 已启用 -->
+                                        <DataTrigger Binding="{Binding Enabled}" Value="True">
+                                            <Setter TargetName="AccentBar" Property="Background" Value="{StaticResource ThemeAccentBrush}" />
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ThemeAccentSoftBorderBrush}" />
                                         </DataTrigger>
-                                        <!-- 选中 -->
-                                        <Trigger
-                                        Property="IsSelected"
-                                        Value="True">
-                                            <Setter
-                                            TargetName="Bd"
-                                            Property="BorderBrush"
-                                            Value="{StaticResource ThemeAccentBrightBrush}" />
-                                            <Setter
-                                            TargetName="Bd"
-                                            Property="BorderThickness"
-                                            Value="2" />
-                                        </Trigger>
                                         <!-- 鼠标悬停 -->
-                                        <Trigger
-                                        Property="IsMouseOver"
-                                        Value="True">
-
-                                            <Setter
-                                            TargetName="Bd"
-                                            Property="BorderBrush"
-                                            Value="{StaticResource ThemeAccentBrightBrush}" />
-
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ThemeBorderFocusBrush}" />
+                                        </Trigger>
+                                        <!-- 选中（放在最后，优先级最高） -->
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ThemeAccentBrush}" />
+                                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ThemeAccentSoftBrush}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
-
                     </Style>
-
                 </ListBox.Resources>
 
                 <ListBox.ItemContainerStyle>
                     <StaticResource ResourceKey="ModListItemStyle" />
                 </ListBox.ItemContainerStyle>
 
-                <!-- Mod 名称 -->
+                <!-- Mod 名称：禁用时弱化显示 -->
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Name}"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Stretch"
-                               Foreground="{StaticResource ThemeTextBrush}"
-                               FontSize="13"
-                               TextTrimming="CharacterEllipsis"
-                               TextWrapping="NoWrap" />
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Stretch"
+                                   FontSize="13"
+                                   TextTrimming="CharacterEllipsis"
+                                   TextWrapping="NoWrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource ThemeMutedTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Enabled}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
-
             </ListBox>
         </Border>
     </Grid>
-
 </UserControl>

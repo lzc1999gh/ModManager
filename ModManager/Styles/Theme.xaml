@@ -1,0 +1,277 @@
+<!--
+    Theme.xaml — 设计系统基座（唯一来源）
+    色板 / 字体 / 圆角 / 全局隐式样式集中在此，改一处全应用生效。
+
+    设计语言：现代简洁卡片式
+      背景 #F4F5F7 ── 白色卡片 + 1px 浅边框 ── 现代红 #D8383D 作强调
+      圆角规范：4（小）/ 6（控件）/ 8（按钮组）/ 10（卡片）/ 999（胶囊）
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============================================================
+         一、色板
+         ============================================================ -->
+
+    <!-- 中性：背景 / 表面 / 交互态 -->
+    <SolidColorBrush x:Key="ThemeBgBrush"                Color="#F4F5F7" />
+    <SolidColorBrush x:Key="ThemeSurfaceBrush"           Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ThemeSurfaceAltBrush"        Color="#FAFBFC" />
+    <SolidColorBrush x:Key="ThemeHoverBrush"             Color="#F2F4F7" />
+    <SolidColorBrush x:Key="ThemePressedBrush"           Color="#E9ECF0" />
+
+    <!-- 中性：边框（三级） -->
+    <SolidColorBrush x:Key="ThemeBorderBrush"            Color="#E4E7EC" />
+    <SolidColorBrush x:Key="ThemeBorderStrongBrush"      Color="#D3D8DF" />
+    <SolidColorBrush x:Key="ThemeBorderFocusBrush"       Color="#C9CFD8" />
+
+    <!-- 中性：文字（三级） -->
+    <SolidColorBrush x:Key="ThemeTextBrush"              Color="#1F2430" />
+    <SolidColorBrush x:Key="ThemeMutedTextBrush"         Color="#5B6472" />
+    <SolidColorBrush x:Key="ThemeFaintTextBrush"         Color="#8A929E" />
+
+    <!-- 主色：现代红 -->
+    <SolidColorBrush x:Key="ThemeAccentBrush"            Color="#D8383D" />
+    <SolidColorBrush x:Key="ThemeAccentBrightBrush"      Color="#BE2B30" />
+    <SolidColorBrush x:Key="ThemeAccentHoverBrush"       Color="#BE2B30" />
+    <SolidColorBrush x:Key="ThemeAccentPressedBrush"     Color="#A21F24" />
+    <SolidColorBrush x:Key="ThemeAccentSoftBrush"        Color="#FDEDED" />
+    <SolidColorBrush x:Key="ThemeAccentSoftBorderBrush"  Color="#F3C6C8" />
+
+    <!-- 状态色 -->
+    <SolidColorBrush x:Key="ThemeDisabledBgBrush"        Color="#F1F3F5" />
+    <SolidColorBrush x:Key="ThemeDisabledTextBrush"      Color="#A8AFB8" />
+    <SolidColorBrush x:Key="ThemeSwitchOffBrush"         Color="#D3D8DF" />
+    <SolidColorBrush x:Key="ThemeScrollThumbBrush"       Color="#C7CCD3" />
+    <SolidColorBrush x:Key="ThemeScrollThumbHoverBrush"  Color="#9AA3AE" />
+    <SolidColorBrush x:Key="ThemeShadowBrush"            Color="#101828" />
+
+    <!--
+        语义色：对话框严重级别
+        信息用蓝、警告用琥珀，错误/确认复用主色红（ThemeAccentBrush + ThemeAccentSoftBrush）。
+        仅用于弹窗图标底色与符号，不参与界面主配色。
+    -->
+    <SolidColorBrush x:Key="ThemeInfoBrush"              Color="#2F6FEB" />
+    <SolidColorBrush x:Key="ThemeInfoSoftBrush"          Color="#EAF1FE" />
+    <SolidColorBrush x:Key="ThemeWarnBrush"              Color="#B7791F" />
+    <SolidColorBrush x:Key="ThemeWarnSoftBrush"          Color="#FDF4E3" />
+
+    <!-- ============================================================
+         二、字体
+         全局字族在 Window 上设置并向下继承，此处提供字号层级
+         ============================================================ -->
+
+    <FontFamily x:Key="ThemeFontFamily">Microsoft YaHei UI, Microsoft YaHei, Segoe UI</FontFamily>
+    <FontFamily x:Key="ThemeMonoFontFamily">Cascadia Mono, Consolas, Courier New</FontFamily>
+
+    <!-- ============================================================
+         三、通用形状与文字样式
+         ============================================================ -->
+
+    <!-- 卡片：白色表面 + 1px 浅边框 + 10 圆角（分层靠边框与底色，不用阴影以保证大图预览性能） -->
+    <Style x:Key="CardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource ThemeSurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- 兼容既有引用名 -->
+    <Style x:Key="SectionContentBorderStyle" TargetType="Border" BasedOn="{StaticResource CardStyle}" />
+
+    <!-- 区块标题左侧的红色小竖条 -->
+    <Style x:Key="SectionAccentBarStyle" TargetType="Border">
+        <Setter Property="Width" Value="3" />
+        <Setter Property="Height" Value="14" />
+        <Setter Property="CornerRadius" Value="1.5" />
+        <Setter Property="Background" Value="{StaticResource ThemeAccentBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+    </Style>
+
+    <!-- 区块标题文字 -->
+    <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!--
+        数量徽标（胶囊）
+        对齐说明：数字墨迹在自身行框内因下沉空间会上浮约 1.7px（YaHei 度量），
+        故用固定高度 18 + 顶边距 3 使徽标中心下移 1.5px，与左侧标题文字视觉居中；
+        背景必须比窗口底色深一档，否则胶囊不可见、内边距会被误读成过大间距。
+    -->
+    <Style x:Key="CountBadgeStyle" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource ThemePressedBrush}" />
+        <Setter Property="Height" Value="18" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="Padding" Value="7,0" />
+        <Setter Property="Margin" Value="7,3,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="MinWidth" Value="22" />
+    </Style>
+
+    <Style x:Key="CountBadgeTextStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeMutedTextBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- 表单字段标签 -->
+    <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeMutedTextBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="0,0,10,0" />
+    </Style>
+
+    <!-- ============================================================
+         四、全局隐式样式（无 x:Key，按控件类型自动套用）
+         ============================================================ -->
+
+    <!-- 窗口：统一浅灰底 -->
+    <Style TargetType="Window">
+        <Setter Property="Background" Value="{StaticResource ThemeBgBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource ThemeFontFamily}" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+    </Style>
+
+    <!--
+        注意：此处刻意不设置 Foreground。
+        样式 Setter 的优先级高于「继承值」，一旦在此写死前景色，
+        按钮模板内通过 TextElement.Foreground 传递的颜色就会被压掉
+        （主按钮文字会变成深色）。前景色统一靠 Window → 父容器逐级继承。
+    -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource ThemeFontFamily}" />
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
+    </Style>
+
+    <!-- 列表容器：去掉默认白色凹陷边框 -->
+    <Style TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+    </Style>
+
+    <!-- 列表项默认外观：圆角高亮，选中用主色淡底 -->
+    <Style TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Bd"
+                            Background="Transparent"
+                            CornerRadius="6"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ThemeHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ThemeAccentSoftBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============================================================
+         五、滚动条：10px 细条，无箭头，悬停加深
+         ============================================================ -->
+    <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="Bd"
+                            Background="{StaticResource ThemeScrollThumbBrush}"
+                            CornerRadius="3"
+                            Margin="3,1" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ThemeScrollThumbHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource ThemeAccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="10" />
+        <Setter Property="MinWidth" Value="10" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" IsTabStop="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollBarThumbStyle}" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" IsTabStop="False" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Height" Value="10" />
+                <Setter Property="MinHeight" Value="10" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="{TemplateBinding Background}">
+                                <Track x:Name="PART_Track" IsDirectionReversed="False">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="False" IsTabStop="False" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ScrollBarThumbStyle}" />
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="False" IsTabStop="False" />
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

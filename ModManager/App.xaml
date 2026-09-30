@@ -3,41 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="ThemeBorderBrush" Color="#202020" />
-        <SolidColorBrush x:Key="ThemeBorderStrongBrush" Color="#8B0000" />
-        <SolidColorBrush x:Key="ThemeAccentBrush" Color="#B00020" />
-        <SolidColorBrush x:Key="ThemeAccentBrightBrush" Color="#D00000" />
-        <SolidColorBrush x:Key="ThemeTextBrush" Color="#111111" />
-        <SolidColorBrush x:Key="ThemeMutedTextBrush" Color="#333333" />
-
-        <!-- 标题下内容区统一使用的边框。 -->
-        <Style x:Key="SectionContentBorderStyle" TargetType="Border">
-            <Setter Property="BorderBrush" Value="{StaticResource ThemeBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="5" />
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-
-        <Style TargetType="Control">
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Microsoft YaHei, Segoe UI" />
-        </Style>
-        <Style TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Microsoft YaHei UI, Microsoft YaHei, Segoe UI" />
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-        </Style>
-        <Style TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-            <Setter Property="CaretBrush" Value="{StaticResource ThemeAccentBrush}" />
-            <Setter Property="Padding" Value="4" />
-        </Style>
-        <Style TargetType="ListBox">
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-        </Style>
-        <Style TargetType="MenuItem">
-            <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />
-        </Style>
+        <ResourceDictionary>
+            <!-- 主题色板与全局隐式样式见 Styles/Theme.xaml，共享控件样式与转换器见 Styles/Controls.xaml -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

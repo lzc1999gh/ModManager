@@ -8,8 +8,8 @@ namespace ModManager.Models
 {
     public class IniFileInfo : INotifyPropertyChanged
     {
-        public string FilePath { get; set; }
-        public string RelativePath { get; set; }
+        public string FilePath { get; set; } = string.Empty;
+        public string RelativePath { get; set; } = string.Empty;
 
         [JsonIgnore]
         public string FileName => Path.GetFileName(FilePath ?? RelativePath);
@@ -31,13 +31,13 @@ namespace ModManager.Models
         }
 
         [JsonIgnore]
-        public string Content { get; set; }
+        public string Content { get; set; } = string.Empty;
 
         [JsonIgnore]
         public ObservableCollection<IniShortcut> Shortcuts { get; } = new ObservableCollection<IniShortcut>();
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) =>
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

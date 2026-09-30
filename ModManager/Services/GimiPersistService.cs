@@ -59,7 +59,7 @@ namespace ModManager.Services
         {
             if (game == null || mod == null) return PersistSnapshotSaveResult.NotApplicable;
 
-            var modPath = NormalizeModPath(game, mod.FilePath);
+            var modPath = NormalizeModPath(game, mod.FilePath ?? string.Empty);
             if (string.IsNullOrEmpty(modPath))
             {
                 Debug.WriteLine("[GIMI Persist] Cannot save: logical Mod path is empty.");
@@ -106,7 +106,7 @@ namespace ModManager.Services
         {
             if (game == null || mod == null) return;
 
-            var modPath = NormalizeModPath(game, mod.FilePath);
+            var modPath = NormalizeModPath(game, mod.FilePath ?? string.Empty);
             if (string.IsNullOrEmpty(modPath)) return;
 
             var savedValues = GetSavedValues(game, modPath);
@@ -133,7 +133,7 @@ namespace ModManager.Services
             var changedCount = 0;
             foreach (var group in grouped)
             {
-                var iniFullPath = ResolveIniFullPath(mod.FilePath, group.Key);
+                var iniFullPath = ResolveIniFullPath(mod.FilePath ?? string.Empty, group.Key);
                 if (string.IsNullOrEmpty(iniFullPath) || !File.Exists(iniFullPath))
                 {
                     Debug.WriteLine($"[GIMI Persist] INI not found: {iniFullPath ?? group.Key}");
@@ -154,7 +154,7 @@ namespace ModManager.Services
         public void RemovePersistState(Game game, Mod mod)
         {
             if (game == null || mod == null) return;
-            RemovePersistState(game, mod.FilePath);
+            RemovePersistState(game, mod.FilePath ?? string.Empty);
         }
 
         public void RemovePersistState(Game game, string modFilePath)
@@ -379,7 +379,7 @@ namespace ModManager.Services
             return string.Empty;
         }
 
-        private static string GetGameKey(Game game) => NormalizeGameKey(game?.Id ?? game?.Name);
+        private static string GetGameKey(Game game) => NormalizeGameKey(game?.Id ?? game?.Name ?? string.Empty);
 
         private static string NormalizeGameKey(string key) =>
             string.IsNullOrWhiteSpace(key) ? "default" : key.Trim();
@@ -409,7 +409,7 @@ namespace ModManager.Services
             return states;
         }
 
-        private Dictionary<string, string> GetSavedValues(Game game, string modPath)
+        private Dictionary<string, string>? GetSavedValues(Game game, string modPath)
         {
             var gameStates = GetOrLoadGameStates(GetGameKey(game));
             if (gameStates.TryGetValue(modPath, out var values))
@@ -505,8 +505,8 @@ namespace ModManager.Services
 
         private static bool TrySplitPersistKey(string relativePath, out string iniPath, out string variableName)
         {
-            iniPath = null;
-            variableName = null;
+            iniPath = string.Empty;
+            variableName = string.Empty;
             if (string.IsNullOrWhiteSpace(relativePath)) return false;
 
             relativePath = relativePath.Replace('/', '\\').Trim();
@@ -573,7 +573,7 @@ namespace ModManager.Services
                     return true;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(stateFile));
+                Directory.CreateDirectory(Path.GetDirectoryName(stateFile) ?? AppDataPaths.GetGameDirectory(gameKey));
                 File.WriteAllText(stateFile, JsonSerializer.Serialize(states, JsonOptions));
                 return true;
             }
@@ -599,7 +599,7 @@ namespace ModManager.Services
 
         private static void MergeGameStates(
             Dictionary<string, Dictionary<string, string>> target,
-            IDictionary<string, Dictionary<string, string>> source,
+            IDictionary<string, Dictionary<string, string>>? source,
             bool overwriteExisting)
         {
             if (target == null || source == null) return;

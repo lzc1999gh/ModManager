@@ -8,10 +8,10 @@ namespace ModManager.Models
 {
     public class Character : INotifyPropertyChanged
     {
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         // 角色所属游戏，用于在状态文件中区分不同游戏的角色。
-        public string GameId { get; set; }
-        private string _name;
+        public string GameId { get; set; } = string.Empty;
+        private string _name = string.Empty;
         public string Name
         {
             get => _name;
@@ -26,8 +26,8 @@ namespace ModManager.Models
         [JsonIgnore]
         public bool IsAddPlaceholder { get; set; }
         // 可选的头像路径，仅用于列表显示，不决定角色是否存在。
-        private string _iconPath;
-        public string IconPath
+        private string? _iconPath;
+        public string? IconPath
         {
             get => _iconPath;
             set
@@ -44,14 +44,15 @@ namespace ModManager.Models
             Mods.CollectionChanged += Mods_CollectionChanged;
         }
 
-        private void Mods_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void Mods_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             OnPropertyChanged(nameof(ModCount));
         }
 
         public int ModCount => Mods?.Count ?? 0;
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }

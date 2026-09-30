@@ -2,13 +2,13 @@ namespace ModManager.Models
 {
     public class Game : System.ComponentModel.INotifyPropertyChanged
     {
-        private string _id;
-        private string _name;
+        private string _id = string.Empty;
+        private string _name = string.Empty;
         private string _characterPicPath = "CharacterPic";
         private string _characterInfoPath = "CharacterInfo.json";
         private string _gameIconPath = "GameIcon.svg";
-        private string _modsRootPath;
-        private string _d3dxUserIniPath;
+        private string _modsRootPath = string.Empty;
+        private string _d3dxUserIniPath = string.Empty;
         private string _iconPath = string.Empty;
         private bool _isVectorIcon = true;
 
@@ -122,8 +122,8 @@ namespace ModManager.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsAddGamePlaceholder { get; set; }
 
-        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null) =>
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+        private void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string? name = null) =>
             PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 }

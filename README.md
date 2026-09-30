@@ -206,9 +206,11 @@ ModManager/
 ├─ ModManager.slnx
 ├─ ModManager/
 │  ├─ Models/          数据模型
-│  ├─ Services/        数据路径、persist 和角色同步服务
+│  ├─ Services/        业务服务与数据访问
 │  ├─ ViewModels/      界面逻辑和命令
 │  ├─ Views/           WPF 用户控件和对话框
+│  ├─ Styles/          设计令牌与共享控件样式
+│  ├─ Converters/      值转换器
 │  ├─ Resources/       程序图标和界面资源
 │  ├─ Tools/           角色图鉴同步脚本
 │  └─ ModManager.csproj
@@ -216,6 +218,23 @@ ModManager/
 ├─ .github/workflows/  CI 和 Release 工作流
 └─ README.md
 ```
+
+界面逻辑按职责分层。`ViewModels/MainViewModel.cs` 只保留状态、命令与流程编排，具体业务下沉到 `Services/`：
+
+| 服务 | 职责 |
+| --- | --- |
+| `GameService` | 游戏的增删改、图标与目录迁移。 |
+| `CharacterService` | 角色信息读写、头像与重命名。 |
+| `ModService` | Mod 扫描、导入、删除与重命名。 |
+| `PreviewService` | 预览图查找、增删与翻页。 |
+| `IniService` | INI 扫描与快捷键解析。 |
+| `StateStore` / `GimiPersistService` | 管理器状态与 `global persist` 快照的持久化。 |
+| `CharacterInfoSyncService` | 官方角色图鉴同步。 |
+| `DialogService` | 弹窗统一入口（`IDialogService`）。 |
+
+所有弹窗都通过 `IDialogService` 走项目自绘的 `MessageDialog`，与主界面共用同一套设计语言，不依赖系统原生 `MessageBox`。
+
+界面外观集中在 `Styles/`：`Theme.xaml` 定义颜色、字号、圆角、间距等设计令牌，`Controls.xaml` 定义按钮、开关、输入框、右键菜单等共享控件模板。修改外观时优先改这两处，不要在视图中内联样式。
 
 ## 已知限制
 

@@ -15,7 +15,7 @@ namespace ModManager.Models
             _previewPaths.CollectionChanged += PreviewPaths_CollectionChanged;
         }
 
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         private string? _name;
         public string? Name
         {
@@ -102,9 +102,9 @@ namespace ModManager.Models
         [JsonIgnore]
         public ObservableCollection<IniFileInfo> ToggleIniFiles { get; } = new ObservableCollection<IniFileInfo>();
 
-        private IniFileInfo _selectedIniFile;
+        private IniFileInfo? _selectedIniFile;
         [JsonIgnore]
-        public IniFileInfo SelectedIniFile
+        public IniFileInfo? SelectedIniFile
         {
             get => _selectedIniFile;
             set
@@ -185,9 +185,9 @@ namespace ModManager.Models
             }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected void OnPropertyChanged([CallerMemberName] string propName = null)
+        protected void OnPropertyChanged([CallerMemberName] string? propName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propName));
         }
