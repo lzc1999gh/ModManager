@@ -268,6 +268,56 @@
          二、开关与切换
          ============================================================ -->
 
+    <!--
+        列表模式圆点按钮（角色列表右上角三态切换）
+        圆点颜色由使用处通过 Background 传入，样式本身不绑定具体语义：
+          未选中 = 小圆点 + 半透明；悬停 = 稍深；选中 = 实心点 + 外圈环，差异明确。
+
+        内外圆对齐要点：
+          · 两个 Ellipse 都显式 Center 居中（不依赖 Stretch 语义），圆心都落在容器正中；
+          · 容器 24、外圈 20、内点 10/8，偏移量均为整数 2 / 7 / 8，100% DPI 下也是整像素；
+          · 不开 SnapsToDevicePixels —— 它会分别吸附"19 外圈"和"10 内点"的边界，
+            把原本同心的两个圆推到相差 0.5px 的位置，正是选中态看起来偏心的原因。
+    -->
+    <Style x:Key="ViewDotRadioStyle" TargetType="RadioButton">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Background" Value="{StaticResource ThemeMutedTextBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid Width="24" Height="24" Background="Transparent">
+                        <Ellipse x:Name="Ring" Width="20" Height="20"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Stroke="{TemplateBinding Background}"
+                                 StrokeThickness="2"
+                                 Opacity="0" />
+                        <Ellipse x:Name="Dot" Width="8" Height="8"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Fill="{TemplateBinding Background}"
+                                 Opacity="0.4" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Dot" Property="Opacity" Value="0.7" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Dot" Property="Width" Value="10" />
+                            <Setter TargetName="Dot" Property="Height" Value="10" />
+                            <Setter TargetName="Dot" Property="Opacity" Value="1" />
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- 图标切换：30×30，选中态红底浅框 -->
     <Style x:Key="IconToggleButtonStyle" TargetType="ToggleButton">
         <Setter Property="Width" Value="30" />
@@ -494,6 +544,19 @@
     <!-- ============================================================
          六、右键菜单
          ============================================================ -->
+
+    <!-- 菜单分隔线：与主题边框同色，缩进对齐菜单项内的文字 -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{StaticResource ThemeBorderBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1" Margin="14,4" Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <Style TargetType="ContextMenu">
         <Setter Property="Foreground" Value="{StaticResource ThemeTextBrush}" />

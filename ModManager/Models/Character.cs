@@ -25,6 +25,25 @@ namespace ModManager.Models
         // 标记是否为列表末尾的“新增角色”占位项（不参与持久化、不视为真实角色）
         [JsonIgnore]
         public bool IsAddPlaceholder { get; set; }
+
+        // 隐藏状态：随 state.json 持久化。隐藏只影响列表显示，
+        // 不删除角色信息、不移动 Mod 目录、不影响 persist 状态。
+        private bool _isHidden;
+        public bool IsHidden
+        {
+            get => _isHidden;
+            set
+            {
+                if (_isHidden == value) return;
+                _isHidden = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HiddenActionText));
+            }
+        }
+
+        // 右键菜单的菜单项文案，随隐藏状态切换（计算属性，不写入 state.json）。
+        [JsonIgnore]
+        public string HiddenActionText => IsHidden ? "取消隐藏" : "隐藏角色";
         // 可选的头像路径，仅用于列表显示，不决定角色是否存在。
         private string? _iconPath;
         public string? IconPath

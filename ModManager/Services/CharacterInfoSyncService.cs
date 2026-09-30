@@ -141,8 +141,14 @@ namespace ModManager.Services
                 .Select(character => new SyncedCharacterInfo(
                     character.Name.Trim(),
                     character.ImageUrl?.Trim() ?? string.Empty))
+                // 主角归一：图鉴按元素/性别拆出的多条在此折叠成一条同名条目，
+                // 紧随其后的 GroupBy 才能把它们去重。头像取图鉴顺序的第一条。
+                .Select(character => new SyncedCharacterInfo(
+                    ProtagonistAliases.Normalize(gameId, character.Name),
+                    character.ImageUrl))
                 .GroupBy(character => character.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.First())
+                .Select(group => group.FirstOrDefault(character => !string.IsNullOrWhiteSpace(character.ImageUrl))
+                                 ?? group.First())
                 .ToList() ?? new List<SyncedCharacterInfo>();
             if (characters.Count == 0)
                 throw new InvalidOperationException("图鉴页面未返回可识别的角色信息，可能是页面结构已变化。");

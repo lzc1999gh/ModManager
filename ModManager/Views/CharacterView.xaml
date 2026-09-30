@@ -24,17 +24,27 @@
                 <Border Style="{StaticResource SectionAccentBarStyle}" />
                 <TextBlock Text="角色" Style="{StaticResource SectionTitleStyle}" />
                 <Border Style="{StaticResource CountBadgeStyle}">
-                    <TextBlock Text="{Binding Characters.Count}" Style="{StaticResource CountBadgeTextStyle}" />
+                    <TextBlock Text="{Binding VisibleCharacterCount}" Style="{StaticResource CountBadgeTextStyle}" />
                 </Border>
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <ToggleButton Style="{StaticResource IconToggleButtonStyle}"
-                              IsChecked="{Binding ShowOnlyWithMods, Mode=TwoWay}"
-                              ToolTip="仅显示有 Mod 的角色">
-                    <svg:SvgViewbox Width="17" Height="17" Source="pack://siteoforigin:,,,/Resources/Icons/sw.svg"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </ToggleButton>
+                <!-- 三态列表模式：默认（灰）/ 仅有 Mod（红）/ 全部含隐藏（蓝） -->
+                <RadioButton GroupName="CharacterListMode"
+                             Style="{StaticResource ViewDotRadioStyle}"
+                             Background="{StaticResource ThemeMutedTextBrush}"
+                             IsChecked="{Binding IsDefaultListMode, Mode=TwoWay}"
+                             ToolTip="默认列表（不包含隐藏角色）" />
+                <RadioButton GroupName="CharacterListMode"
+                             Style="{StaticResource ViewDotRadioStyle}"
+                             Background="{StaticResource ThemeAccentBrush}"
+                             IsChecked="{Binding IsWithModsListMode, Mode=TwoWay}"
+                             ToolTip="仅显示有 Mod 的角色（不包含隐藏角色）" />
+                <RadioButton GroupName="CharacterListMode"
+                             Style="{StaticResource ViewDotRadioStyle}"
+                             Background="{StaticResource ThemeInfoBrush}"
+                             IsChecked="{Binding IsAllListMode, Mode=TwoWay}"
+                             ToolTip="全部列表（包含隐藏角色）" />
 
                 <Button Command="{Binding SyncCharacterInfoCommand}"
                         Style="{StaticResource SecondaryButtonStyle}"
@@ -48,7 +58,7 @@
              角色网格
              ============================================================ -->
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" ClipToBounds="True">
-            <ListBox ItemsSource="{Binding CharactersView}"
+            <ListBox ItemsSource="{Binding VisibleCharacters}"
                      SelectedItem="{Binding SelectedCharacter}"
                      Padding="6"
                      HorizontalContentAlignment="Stretch"
@@ -97,6 +107,17 @@
                     <DataTemplate>
                         <StackPanel Width="72" HorizontalAlignment="Center">
 
+                            <!-- 隐藏的角色只在“全部列表”出现，淡化显示以便与正常角色区分 -->
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsHidden}" Value="True">
+                                            <Setter Property="Opacity" Value="0.45" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
                             <!-- 普通角色项：头像 + 名字（占位项时隐藏） -->
                             <StackPanel>
                                 <StackPanel.Style>
@@ -130,6 +151,8 @@
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                             <MenuItem Header="修改头像" Click="ChangeCharacterIcon_Click" />
                                             <MenuItem Header="修改角色名" Click="RenameCharacter_Click" />
+                                            <Separator />
+                                            <MenuItem Header="{Binding HiddenActionText}" Click="ToggleCharacterHidden_Click" />
                                         </ContextMenu>
                                     </Border.ContextMenu>
 
@@ -137,7 +160,8 @@
                                         <Grid.Clip>
                                             <RectangleGeometry Rect="0,0,56,56" RadiusX="9" RadiusY="9" />
                                         </Grid.Clip>
-                                        <Image Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}}"
+                                        <!-- 头像按 128px 解码（显示尺寸 56），避免每次都解原图 -->
+                                        <Image Source="{Binding IconPath, Converter={StaticResource ImagePathToImageSource}, ConverterParameter=128}"
                                                Stretch="UniformToFill" />
                                         <TextBlock Text="无头像"
                                                    FontSize="10"

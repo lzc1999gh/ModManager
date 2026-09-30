@@ -33,5 +33,16 @@ namespace ModManager.Views
                 vm.RenameCharacter(character);
             }
         }
+
+        private void ToggleCharacterHidden_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not MainViewModel vm) return;
+            if (sender is MenuItem menuItem && menuItem.Parent is ContextMenu contextMenu
+                && contextMenu.PlacementTarget is FrameworkElement target
+                && target.DataContext is Character character)
+            {
+                vm.ToggleCharacterHidden(character);
+            }
+        }
     }
 }

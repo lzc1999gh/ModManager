@@ -11,7 +11,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
@@ -70,9 +69,6 @@ namespace ModManager.ViewModels
             LoadStateOrSample();
             foreach (var game in Games) _gameService.EnsureIconPath(game);
             EnsureAddGamePlaceholder();
-
-            CharactersView = CollectionViewSource.GetDefaultView(Characters);
-            CharactersView.Filter = CharacterFilter;
 
             // 初始游戏在视图创建前就已选中，这里重载一次，让角色与 Mod 面板拿到初始数据
             if (SelectedGame != null)
@@ -255,20 +251,95 @@ namespace ModManager.ViewModels
             }
         }
 
-        private bool _showOnlyWithMods;
-        public bool ShowOnlyWithMods
+        // 角色列表显示范围：默认（不含隐藏）/ 仅有 Mod / 全部（含隐藏）
+        private CharacterListMode _listMode = CharacterListMode.Default;
+        public CharacterListMode ListMode
         {
-            get => _showOnlyWithMods;
+            get => _listMode;
             set
             {
-                if (_showOnlyWithMods == value) return;
-                _showOnlyWithMods = value;
+                if (_listMode == value) return;
+                _listMode = value;
                 OnPropertyChanged();
-                CharactersView?.Refresh();
+                OnPropertyChanged(nameof(IsDefaultListMode));
+                OnPropertyChanged(nameof(IsWithModsListMode));
+                OnPropertyChanged(nameof(IsAllListMode));
+                RefreshCharactersView();
             }
         }
 
-        public ICollectionView? CharactersView { get; private set; }
+        // 以下三个属性供右上角三个圆点按钮双向绑定（RadioButton 天然互斥）
+        public bool IsDefaultListMode
+        {
+            get => _listMode == CharacterListMode.Default;
+            set { if (value) ListMode = CharacterListMode.Default; }
+        }
+
+        public bool IsWithModsListMode
+        {
+            get => _listMode == CharacterListMode.WithMods;
+            set { if (value) ListMode = CharacterListMode.WithMods; }
+        }
+
+        public bool IsAllListMode
+        {
+            get => _listMode == CharacterListMode.All;
+            set { if (value) ListMode = CharacterListMode.All; }
+        }
+
+        /// <summary>
+        /// 当前列表模式下实际可见的角色（占位项始终排在最后）。
+        /// 用独立集合并以"最小增删"同步，取代 ICollectionView.Refresh()：
+        /// Reset 会让 ListBox 丢弃并重建全部容器（GI 130 个），切换模式时肉眼可见地卡；
+        /// 只增删差异项则通常只有个位数变更。
+        /// </summary>
+        public ObservableCollection<Character> VisibleCharacters { get; } = new();
+
+        private int _visibleCharacterCount;
+
+        /// <summary>当前筛选条件下可见的角色数量（不含“新增角色”占位项）。</summary>
+        public int VisibleCharacterCount => _visibleCharacterCount;
+
+        /// <summary>按当前列表模式重算可见角色，并同步数量徽标。</summary>
+        private void RefreshCharactersView()
+        {
+            var target = Characters.Where(CharacterFilter).ToList();
+
+            // target 与 VisibleCharacters 都是 Characters 的有序子序列，
+            // 因此可以双指针走一遍，左边多出的删掉、右边缺了的补上，其余原地不动。
+            var targetSet = new HashSet<Character>(target);
+            int ti = 0, ci = 0;
+
+            while (ti < target.Count || ci < VisibleCharacters.Count)
+            {
+                if (ti < target.Count && ci < VisibleCharacters.Count &&
+                    ReferenceEquals(target[ti], VisibleCharacters[ci]))
+                {
+                    ti++;
+                    ci++;
+                    continue;
+                }
+
+                if (ci < VisibleCharacters.Count && !targetSet.Contains(VisibleCharacters[ci]))
+                {
+                    VisibleCharacters.RemoveAt(ci);
+                    continue;
+                }
+
+                if (ti < target.Count)
+                {
+                    VisibleCharacters.Insert(ci, target[ti]);
+                    ti++;
+                    ci++;
+                    continue;
+                }
+
+                break; // 兜底，正常情况下不会走到
+            }
+
+            _visibleCharacterCount = VisibleCharacters.Count(character => !character.IsAddPlaceholder);
+            OnPropertyChanged(nameof(VisibleCharacterCount));
+        }
 
         public bool CanSyncCharacterInfo => SelectedGame != null
             && !_isSyncingCharacterInfo
@@ -575,7 +646,12 @@ namespace ModManager.ViewModels
         {
             Characters.Clear();
             SelectedCharacter = null;
-            if (game == null) return;
+            if (game == null)
+            {
+                // 没有游戏时也要把可见列表同步清空，避免残留上一款游戏的角色
+                RefreshCharactersView();
+                return;
+            }
 
             var cached = GetCachedCharacters(StateStore.GetGameKey(game));
             var infos = _characterService.ReadInfoFile(game);
@@ -610,7 +686,7 @@ namespace ModManager.ViewModels
             foreach (var character in characters) Characters.Add(character);
             Characters.Add(_addPlaceholder);
             SelectedCharacter = Characters.FirstOrDefault(character => !character.IsAddPlaceholder);
-            CharactersView?.Refresh();
+            RefreshCharactersView();
         }
 
         public void AddCharacter()
@@ -654,7 +730,7 @@ namespace ModManager.ViewModels
             Characters.Add(character);
             Characters.Add(_addPlaceholder);
             SaveCurrentCharactersToCache();
-            CharactersView?.Refresh();
+            RefreshCharactersView();
             SelectedCharacter = character;
             SaveState();
         }
@@ -765,7 +841,7 @@ namespace ModManager.ViewModels
                 character.Name = requestedName;
                 character.IconPath = newIcon;
                 SaveCurrentCharactersToCache();
-                CharactersView?.Refresh();
+                RefreshCharactersView();
                 SaveState();
             }
             catch (Exception ex)
@@ -782,6 +858,27 @@ namespace ModManager.ViewModels
                 }
                 _dialogs.ShowError($"修改角色名失败：{ex.Message}", "修改角色名");
             }
+        }
+
+        /// <summary>
+        /// 隐藏 / 取消隐藏角色。隐藏只是显示层的开关：不删除角色信息、
+        /// 不移动 Mod 目录、不影响 persist 状态，随时可在“全部列表”里取消隐藏。
+        /// </summary>
+        public void ToggleCharacterHidden(Character character)
+        {
+            if (character == null || character.IsAddPlaceholder) return;
+
+            character.IsHidden = !character.IsHidden;
+
+            // 隐藏后该角色会立刻从当前列表消失，若它正被选中则把选中项让给下一个可见角色
+            if (character.IsHidden && ReferenceEquals(SelectedCharacter, character))
+            {
+                SelectedCharacter = Characters.FirstOrDefault(item =>
+                    !item.IsAddPlaceholder && !item.IsHidden);
+            }
+
+            RefreshCharactersView();
+            SaveState();
         }
 
         /// <summary>角色目录改名后，同步其 Mod、INI、预览图与 Persist 状态中的路径。</summary>
@@ -817,12 +914,20 @@ namespace ModManager.ViewModels
         private bool CharacterFilter(object o)
         {
             if (o is not Character character) return true;
-            // 占位项始终放行，保证“新增角色”按钮不被“仅显示有 Mod”过滤掉
+            // 占位项始终放行，保证“新增角色”按钮不被任何筛选模式过滤掉
             if (character.IsAddPlaceholder) return true;
-            if (!ShowOnlyWithMods) return true;
-            var path = SelectedGame?.ModsRootPath;
-            if (string.IsNullOrEmpty(path) || !Directory.Exists(path)) return true;
-            return character.Mods != null && character.Mods.Count > 0;
+
+            // 全部列表：隐藏角色也显示（界面会做淡化标识）
+            if (_listMode == CharacterListMode.All) return true;
+
+            // 隐藏的角色在其余模式下都不出现，也不受“有 Mod”模式影响
+            if (character.IsHidden) return false;
+
+            // 有 Mod 列表：Mods 集合由扫描结果填充，未配置 Mod 根目录时天然为空
+            if (_listMode == CharacterListMode.WithMods)
+                return character.Mods != null && character.Mods.Count > 0;
+
+            return true;
         }
 
         // =========================================================
@@ -955,7 +1060,7 @@ namespace ModManager.ViewModels
             SelectedCharacter ??= Characters.FirstOrDefault();
             SelectedMod = SelectedCharacter?.Mods.FirstOrDefault(m => m.Enabled) ?? SelectedCharacter?.Mods.FirstOrDefault();
             SaveState();
-            CharactersView?.Refresh();
+            RefreshCharactersView();
         }
 
         // =========================================================
