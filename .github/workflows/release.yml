@@ -76,14 +76,8 @@ jobs:
           Compress-Archive -Path ./publish/win-x64/* `
             -DestinationPath ./ModManager-${{ steps.version.outputs.version }}-win-x64.zip
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ModManager-${{ steps.version.outputs.version }}
-          path: |
-            ./publish/framework-dependent
-            ./publish/win-x64
-
+      # 不再额外上传 artifact：发行包已作为 Release 附件发布，
+      # 重复上传会在每次发版时多占约 76MB 的 Actions 存储。
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
