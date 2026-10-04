@@ -176,7 +176,7 @@
                         </ListBox.Style>
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <WrapPanel />
+                                <StackPanel Orientation="Vertical" />
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemContainerStyle>
