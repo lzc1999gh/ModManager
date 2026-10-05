@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using ModManager.Models;
-using SharpCompress.Archives;
-using SharpCompress.Common;
 
 namespace ModManager.Services
 {
@@ -132,9 +130,11 @@ namespace ModManager.Services
 
         /// <summary>
         /// 导入文件/目录/压缩包到指定角色目录，返回新增的 Mod 列表。
-        /// confirmOverwrite 用于目标已存在时向用户确认。
+        /// confirmOverwrite 用于目标已存在时向用户确认；
+        /// reportIssue 用于收集导入问题（如压缩包解压失败），由调用方统一展示。
         /// </summary>
-        public List<Mod> Import(IEnumerable<string> paths, Character target, string modsRoot, Func<string, bool> confirmOverwrite)
+        public List<Mod> Import(IEnumerable<string> paths, Character target, string modsRoot,
+            Func<string, bool> confirmOverwrite, Action<string>? reportIssue = null)
         {
             var added = new List<Mod>();
             if (paths == null || target == null) return added;
@@ -159,9 +159,22 @@ namespace ModManager.Services
                         if (ArchiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
                         {
                             var destination = Path.Combine(targetDir, Path.GetFileNameWithoutExtension(sourcePath));
-                            var extracted = TryExtractArchive(sourcePath, destination, confirmOverwrite, out var fallbackMod);
-                            if (fallbackMod != null) added.Add(fallbackMod);
-                            else if (extracted) added.Add(CreateModFromDirectory(destination));
+                            if (!confirmOverwrite(destination)) continue;
+
+                            if (ArchiveExtractor.TryExtract(sourcePath, destination, out var extractError))
+                            {
+                                added.Add(CreateModFromDirectory(destination));
+                            }
+                            else
+                            {
+                                // 解压失败：清理残留并跳过。压缩包不能被游戏当作 Mod 使用，
+                                // 不再原样复制进 Mod 列表，把原因明确告诉用户。
+                                FileSystemHelper.DeleteEntry(destination);
+                                Debug.WriteLine($"[Import] Extract failed for '{sourcePath}': {extractError}");
+                                reportIssue?.Invoke(
+                                    $"“{Path.GetFileName(sourcePath)}”解压失败：{extractError ?? "未知原因"}。" +
+                                    "已跳过；可手动解压后把得到的文件夹拖入列表导入。");
+                            }
                         }
                         else
                         {
@@ -186,45 +199,6 @@ namespace ModManager.Services
                 }
             }
             return added;
-        }
-
-        private bool TryExtractArchive(string sourcePath, string destination, Func<string, bool> confirmOverwrite, out Mod? fallbackMod)
-        {
-            fallbackMod = null;
-            if (!confirmOverwrite(destination)) return false;
-
-            Directory.CreateDirectory(destination);
-            try
-            {
-                using var archive = ArchiveFactory.OpenArchive(sourcePath);
-                foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
-                {
-                    entry.WriteToDirectory(destination, new ExtractionOptions
-                    {
-                        ExtractFullPath = true,
-                        Overwrite = true
-                    });
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[Import] Extract failed for '{sourcePath}', falling back to copy: {ex}");
-                // 解压失败时回退为直接复制压缩包
-                if (Directory.Exists(destination)) Directory.Delete(destination, recursive: true);
-                var fallback = Path.Combine(Path.GetDirectoryName(destination) ?? string.Empty, Path.GetFileName(sourcePath));
-                if (!confirmOverwrite(fallback)) return false;
-                File.Copy(sourcePath, fallback);
-                fallbackMod = new Mod
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Name = Path.GetFileName(fallback),
-                    FilePath = fallback,
-                    Size = new FileInfo(fallback).Length,
-                    Enabled = true
-                };
-                return false;
-            }
         }
 
         private Mod CreateModFromDirectory(string directory)

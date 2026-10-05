@@ -82,7 +82,7 @@
              若放在内层子元素上，方形背景会盖住圆角（WPF 不会按圆角裁剪子元素） -->
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="0"
                 Background="{StaticResource ThemeSurfaceAltBrush}">
-            <Grid x:Name="PreviewArea">
+            <Grid x:Name="PreviewArea" Background="Transparent">
 
                 <!-- 预览图 -->
                 <Image Source="{Binding SelectedMod.CurrentPreviewPath, Converter={StaticResource ImagePathToImageSource}}"

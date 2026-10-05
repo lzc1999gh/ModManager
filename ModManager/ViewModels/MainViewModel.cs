@@ -1173,13 +1173,17 @@ namespace ModManager.ViewModels
             if (paths == null || target == null) return;
             if (!EnsureValidModsRoot(SelectedGame, "导入 Mod")) return;
 
-            var imported = _modService.Import(paths, target, SelectedGame!.ModsRootPath!, ConfirmOverwrite);
+            var issues = new List<string>();
+            var imported = _modService.Import(paths, target, SelectedGame!.ModsRootPath!, ConfirmOverwrite, issues.Add);
             foreach (var mod in imported)
             {
                 ApplySavedSource(mod);
                 target.Mods.Add(mod);
             }
             SaveState();
+
+            if (issues.Count > 0)
+                _dialogs.ShowWarning(string.Join("\n\n", issues), "导入 Mod");
         }
 
         private bool ConfirmOverwrite(string destination)
